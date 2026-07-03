@@ -1,5 +1,23 @@
 # fable-mode — make Opus behave like Fable 5 in Claude Code
 
+## Quick start — 2 lines, zero config
+
+Inside any Claude Code session:
+
+```
+/plugin marketplace add jee599/fable-mode-kit
+/plugin install fable-mode@jidonglab
+```
+
+Done. From your next session on, **any Opus session is auto-detected** and runs under
+Fable 5 conduct norms — nothing to configure, no settings.json edits. Fable sessions
+are detected too and left untouched. Opt out anytime with `export FABLE_MODE=0`,
+toggle with `/fable-mode on|off|status`. Only requirement: `jq`
+(`brew install jq` — if missing, the plugin tells you at session start instead of
+failing silently).
+
+---
+
 Claude Fable 5 costs exactly 2× Opus 4.8 ($10/$50 vs $5/$25 per Mtok). The measurable
 difference between them splits into two parts: **a Fable-only system-prompt conduct layer**
 (portable) and **model weights** (not portable). This kit ports the first part.

@@ -14,6 +14,7 @@
 #      consulted only when the transcript is silent about the model (turn 1 etc.).
 
 [[ "${FABLE_MODE:-}" == "0" ]] && exit 0  # explicit kill-switch beats every activation path
+command -v jq >/dev/null 2>&1 || exit 0        # no jq → inert (SessionStart hook already warned)
 
 INPUT=$(cat)
 SID=$(echo "$INPUT" | jq -r '.session_id // empty')

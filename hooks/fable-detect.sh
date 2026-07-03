@@ -5,6 +5,7 @@
 # Per-turn re-detection (incl. mid-session /model switches) lives in fable-context.sh.
 
 [[ "${FABLE_MODE:-}" == "0" ]] && exit 0  # explicit kill-switch (claude-fast, A/B tests)
+command -v jq >/dev/null 2>&1 || { echo "[fable-mode] jq가 없어 비활성 상태입니다 — 'brew install jq'(macOS) 또는 'apt install jq' 후 새 세션부터 작동합니다."; exit 0; }
 
 INPUT=$(cat)
 SID=$(echo "$INPUT" | jq -r '.session_id // empty')
