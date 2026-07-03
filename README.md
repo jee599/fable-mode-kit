@@ -1,0 +1,85 @@
+# fable-mode — make Opus behave like Fable 5 in Claude Code
+
+Claude Fable 5 costs exactly 2× Opus 4.8 ($10/$50 vs $5/$25 per Mtok). The measurable
+difference between them splits into two parts: **a Fable-only system-prompt conduct layer**
+(portable) and **model weights** (not portable). This kit ports the first part.
+
+Measured result (author's A/B/C probes, same 3 tasks · same effort · judged on a
+6-dimension conduct rubric, 36 pts):
+
+| condition | score | conduct fidelity |
+|---|---|---|
+| bare Opus 4.8 | 23/36 | 64% |
+| Opus 4.8 + this kit | **35/36** | **97%** |
+| real Fable 5 (baseline) | 36/36 | 100% |
+
+Same-task measured cost with the kit was **71–78% of Fable** (half unit price, minus
+extra self-correction turns). What the kit does *not* close: entangled single-pass
+reasoning and long unsupervised runs (~5–11 pt third-party benchmark gap, estimate) —
+route those to Fable when you have it, or compensate with multi-agent verification.
+
+## What bare Opus actually does wrong (and the kit fixes)
+
+- Asked *"why does this bug happen?"* → bare Opus **silently edited the file** and
+  asserted results without running anything. With the kit: diagnosis only, verified by
+  execution. (measured 6/12 → 12/12)
+- Given an ambiguous *"clean up these log files"* → bare Opus investigated, then ended
+  with *"which way would you like?"* — zero action. With the kit: executes a
+  non-destructive default, verifies, defers only the destructive part. (5/12 → 12/12)
+
+## Install
+
+```bash
+git clone <this-repo> && cd fable-mode-kit && ./install.sh
+```
+
+Requires: Claude Code CLI, `jq`, bash (macOS/Linux). The installer is idempotent,
+merges (never overwrites) your `~/.claude/settings.json`, backs it up first, and
+smoke-tests the hooks before finishing.
+
+## What gets installed
+
+| piece | file | role |
+|---|---|---|
+| SessionStart hook | `hooks/fable-detect.sh` | auto-detects Opus sessions → arms fable-mode |
+| UserPromptSubmit hook | `hooks/fable-context.sh` | re-injects Fable conduct norms **every turn** (adherence dilutes over long contexts) |
+| Stop hook | `hooks/fable-stop-verify.sh` | forces **one** self-verification pass per major turn (verify-before-report, conclusion-first final message) |
+| output style | `output-styles/fable-like.md` | system-prompt-level port of the norms |
+| skill | `skills/fable-mode/` | `/fable-mode on\|off\|status` manual toggle |
+| wrapper | `bin/claude-fablelike` | one-shot: Opus + xhigh effort + output style + hooks |
+| optional | `agents/conduct-snippet.md` | paste into custom agent definitions — subagents don't receive hook injections |
+
+## Behavior & controls
+
+- **Auto**: any session on an Opus model gets the norms; Fable sessions are detected
+  and left untouched (no double injection).
+- **Off switch**: `export FABLE_MODE=0` disables everything for that process tree —
+  use in cron jobs and cheap one-shot wrappers (the Stop self-check adds one extra
+  turn per major prompt, which you may not want on a timeout budget).
+- **Force on**: `export FABLE_MODE=1` (what `claude-fablelike` does) or `/fable-mode on`.
+- The injected block tells the model it is Opus (prevents identity leakage into task
+  output) and forbids mentioning the norms/self-check in user-facing text — both were
+  real observed failure modes, fixed and re-verified.
+
+## Honest limits
+
+- 97% is a *conduct* score on tasks chosen to expose conduct differences — it is not
+  an intelligence benchmark. Sample: 3 tasks × 1 run per condition.
+- The stack reaches the norms via correction turns (8 vs 4 turns on one task); Fable
+  gets there on the first attempt. You pay turns, not quality.
+- Entangled first-pass reasoning and long autonomous runs keep a real gap. For
+  review/audit work, compensate with fan-out + adversarial verification (costs
+  1–2.5× a single Fable run, estimate); for high-stakes decisions, N attempts +
+  a judge pass + human gate.
+
+## Uninstall
+
+```bash
+./uninstall.sh
+```
+
+Removes all files, deregisters the hooks (settings.json backed up again), deletes state.
+
+## License
+
+MIT

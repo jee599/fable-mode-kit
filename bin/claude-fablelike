@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# claude-fablelike — run Opus 4.8 tuned to behave like Fable 5 (full 3-layer stack).
+#   layer 1 (model/effort): --model claude-opus-4-8 + xhigh (FABLELIKE_EFFORT=max opt-in;
+#            docs: max is prone to overthinking on routine work)
+#   layer 2 (system prompt): fable-like output style + ultracode auto-workflows
+#            (FABLELIKE_ULTRA=0 disables ultracode for cheaper sessions)
+#   layer 3 (hooks): FABLE_MODE=1 → fable-context.sh per-turn norm injection +
+#            fable-stop-verify.sh one self-check per major turn
+# Flags verified on v2.1.198: --settings accepts inline JSON that layers over
+# settings.json; outputStyle/ultracode are settings keys (/output-style removed v2.1.91).
+set -euo pipefail
+
+EFFORT="${FABLELIKE_EFFORT:-xhigh}"
+STYLE_FILE="$HOME/.claude/output-styles/fable-like.md"
+if [[ ! -f "$STYLE_FILE" ]]; then
+  echo "claude-fablelike: missing $STYLE_FILE — install the fable-like output style first." >&2
+  exit 1
+fi
+
+SETTINGS='{"outputStyle": "fable-like", "ultracode": true}'
+if [[ "${FABLELIKE_ULTRA:-1}" == "0" ]]; then
+  SETTINGS='{"outputStyle": "fable-like"}'
+fi
+
+export FABLE_MODE=1
+exec claude \
+  --model claude-opus-4-8 \
+  --effort "$EFFORT" \
+  --settings "$SETTINGS" \
+  "$@"
