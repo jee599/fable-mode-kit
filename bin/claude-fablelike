@@ -13,8 +13,8 @@ set -euo pipefail
 EFFORT="${FABLELIKE_EFFORT:-xhigh}"
 STYLE_FILE="$HOME/.claude/output-styles/fable-like.md"
 if [[ ! -f "$STYLE_FILE" ]]; then
-  echo "claude-fablelike: missing $STYLE_FILE — install the fable-like output style first." >&2
-  exit 1
+  # not fatal: the style may be provided by the fable-mode plugin instead of a file install
+  echo "claude-fablelike: note — $STYLE_FILE not found; assuming the fable-mode plugin provides the output style." >&2
 fi
 
 SETTINGS='{"outputStyle": "fable-like", "ultracode": true}'

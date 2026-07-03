@@ -29,13 +29,32 @@ route those to Fable when you have it, or compensate with multi-agent verificati
 
 ## Install
 
+**Route A — plugin (recommended).** Inside any Claude Code session:
+
+```
+/plugin marketplace add jee599/fable-mode-kit
+/plugin install fable-mode@jidonglab
+```
+
+Hooks, the `/fable-mode` skill, and the `fable-like` output style register
+automatically; update later with `/plugin update`, remove with `/plugin uninstall`.
+The `claude-fablelike` wrapper is not part of the plugin — grab it from `bin/` if
+you want the one-shot launcher, or just run `claude --model claude-opus-4-8
+--effort xhigh --settings '{"outputStyle":"fable-like"}'`.
+
+**Route B — classic installer** (no plugin system, or you want the wrapper installed):
+
 ```bash
-git clone <this-repo> && cd fable-mode-kit && ./install.sh
+git clone https://github.com/jee599/fable-mode-kit && cd fable-mode-kit && ./install.sh
 ```
 
 Requires: Claude Code CLI, `jq`, bash (macOS/Linux). The installer is idempotent,
 merges (never overwrites) your `~/.claude/settings.json`, backs it up first, and
 smoke-tests the hooks before finishing.
+
+> Pick **one** route. Installing both registers the hooks twice and the norms get
+> injected twice per turn (harmless but wasteful). `uninstall.sh` only removes the
+> classic install; `/plugin uninstall` only removes the plugin.
 
 ## What gets installed
 

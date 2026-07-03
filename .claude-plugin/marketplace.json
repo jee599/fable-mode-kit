@@ -1,0 +1,15 @@
+{
+  "name": "jidonglab",
+  "description": "jidonglab's Claude Code plugins — starting with fable-mode (run Opus like Fable 5).",
+  "owner": {
+    "name": "jidonglab",
+    "url": "https://github.com/jee599"
+  },
+  "plugins": [
+    {
+      "name": "fable-mode",
+      "source": "./",
+      "description": "Make Opus 4.8 behave like Fable 5 — auto-detecting conduct-norm hooks + self-verification + fable-like output style. Measured 64%→97% conduct fidelity at half the price."
+    }
+  ]
+}
