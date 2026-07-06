@@ -113,6 +113,9 @@ smoke-tests the hooks before finishing.
   an intelligence benchmark. Sample: 3 tasks × 1 run per condition, plus a no-tool
   Q&A probe added 2026-07-06 (kit answer ≈85–90% equivalent to Fable's at 49% of its
   cost on that task; deliverable equivalence on the tool tasks measured 80–95%).
+  Diagnosis + implementation re-measured 2026-07-07 on v1.4: aggregate cost across
+  the 4 task types = **72% of Fable**, with all three slugify implementations
+  producing identical output on shared test cases.
 - The stack reaches the norms via correction turns (8 vs 4 turns on one task); Fable
   gets there on the first attempt. You pay turns, not quality.
 - Entangled first-pass reasoning and long autonomous runs keep a real gap. For
