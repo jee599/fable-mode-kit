@@ -80,16 +80,21 @@ smoke-tests the hooks before finishing.
 |---|---|---|
 | SessionStart hook | `hooks/fable-detect.sh` | auto-detects Opus sessions → arms fable-mode |
 | UserPromptSubmit hook | `hooks/fable-context.sh` | re-injects Fable conduct norms **every turn** (adherence dilutes over long contexts) |
-| Stop hook | `hooks/fable-stop-verify.sh` | forces **one** self-verification pass per major turn (verify-before-report, conclusion-first final message) |
+| SubagentStart hook | `hooks/fable-subagent.sh` | injects an identity-neutral conduct block into **every subagent** at spawn (built-in, custom, and workflow agents — they never see UserPromptSubmit injections) |
+| Stop hook | `hooks/fable-stop-verify.sh` | forces **one** self-verification pass per major turn (verify-before-report, conclusion-first final message, scope check) |
 | output style | `output-styles/fable-like.md` | system-prompt-level port of the norms |
 | skill | `skills/fable-mode/` | `/fable-mode on\|off\|status` manual toggle |
 | wrapper | `bin/claude-fablelike` | one-shot: Opus + xhigh effort + output style + hooks |
-| optional | `agents/conduct-snippet.md` | paste into custom agent definitions — subagents don't receive hook injections |
+| optional | `agents/conduct-snippet.md` | fallback for environments without SubagentStart support (CLI < ~2.1.2xx); agents whose definition already contains it are auto-skipped by the hook (no double injection) |
 
 ## Behavior & controls
 
 - **Auto**: any session on an Opus model gets the norms; Fable sessions are detected
   and left untouched (no double injection).
+- **Subagent coverage**: the SubagentStart hook covers agents spawned by the Agent
+  tool and workflows, so conduct norms hold across fan-out work — the previous gap
+  where subagents ran bare. The injected block is identity-neutral (a subagent may
+  run a different model than the session).
 - **Off switch**: `export FABLE_MODE=0` disables everything for that process tree —
   use in cron jobs and cheap one-shot wrappers (the Stop self-check adds one extra
   turn per major prompt, which you may not want on a timeout budget).

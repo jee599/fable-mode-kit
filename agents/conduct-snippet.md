@@ -1,5 +1,7 @@
-# CLAUDE.md 스니펫 — output style을 못 쓰는 자리(서브에이전트, -p 최소 구성 등)용
-# fable-like output style이 로드되는 세션에서는 중복이므로 넣지 않는다.
+# CLAUDE.md 스니펫 — SubagentStart 훅을 못 쓰는 환경(구버전 CLI, -p 최소 구성 등)용 fallback.
+# v1.3부터 서브에이전트 커버는 hooks/fable-subagent.sh(SubagentStart)가 기본이다.
+# 이 스니펫이 에이전트 정의에 들어 있으면 훅이 'fable-like-conduct' 마커를 감지해
+# 자동으로 주입을 건너뛴다(이중 주입 없음). output style이 로드되는 세션에도 넣지 않는다.
 
 ## Fable-like conduct (applies when the fable-like output style is not loaded)
 - Lead with the outcome: the first sentence of your final message is the TLDR; detail after.

@@ -20,7 +20,7 @@ if [[ -f "$SETTINGS" ]] && grep -q "fable-" "$SETTINGS"; then
   echo "hooks deregistered from settings.json (backup kept)"
 fi
 
-rm -f "$CLAUDE_DIR/hooks/fable-detect.sh" "$CLAUDE_DIR/hooks/fable-context.sh" "$CLAUDE_DIR/hooks/fable-stop-verify.sh"
+rm -f "$CLAUDE_DIR/hooks/fable-detect.sh" "$CLAUDE_DIR/hooks/fable-context.sh" "$CLAUDE_DIR/hooks/fable-stop-verify.sh" "$CLAUDE_DIR/hooks/fable-subagent.sh"
 rm -f "$CLAUDE_DIR/output-styles/fable-like.md" "$BIN_DIR/claude-fablelike"
 rm -rf "$CLAUDE_DIR/skills/fable-mode" "$CLAUDE_DIR/state/fable-mode"
 echo "files removed. Done."

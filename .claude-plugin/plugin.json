@@ -1,14 +1,20 @@
 {
   "name": "fable-mode",
   "displayName": "Fable Mode",
-  "description": "Make Opus 4.8 behave like Fable 5 — per-turn conduct norm injection, end-of-turn self-verification, auto-detection of Opus sessions. Measured 64%→97% conduct fidelity at half the price.",
+  "description": "Make Opus 4.8 behave like Fable 5 — per-turn conduct norm injection, subagent conduct coverage (SubagentStart), end-of-turn self-verification, auto-detection of Opus sessions. Measured 64%→97% conduct fidelity at half the price.",
   "author": {
     "name": "jidonglab",
     "url": "https://github.com/jee599"
   },
   "repository": "https://github.com/jee599/fable-mode-kit",
   "license": "MIT",
-  "keywords": ["opus", "fable", "hooks", "conduct", "output-style"],
+  "keywords": [
+    "opus",
+    "fable",
+    "hooks",
+    "conduct",
+    "output-style"
+  ],
   "hooks": "./hooks/hooks.json",
   "skills": "./skills/",
   "outputStyles": "./output-styles/"
