@@ -11,8 +11,8 @@ INPUT=$(cat)
 SID=$(echo "$INPUT" | jq -r '.session_id // empty')
 MODEL=$(echo "$INPUT" | jq -r '.model // empty')
 STATE_DIR="$HOME/.claude/state/fable-mode"
-mkdir -p "$STATE_DIR/sessions" "$STATE_DIR/turns"
-find "$STATE_DIR/sessions" "$STATE_DIR/turns" -type f -mtime +7 -delete 2>/dev/null
+mkdir -p "$STATE_DIR/sessions" "$STATE_DIR/turns" "$STATE_DIR/stats"
+find "$STATE_DIR/sessions" "$STATE_DIR/turns" "$STATE_DIR/stats" -type f -mtime +7 -delete 2>/dev/null
 
 [[ -z "$SID" ]] && exit 0
 

@@ -45,11 +45,16 @@ if [[ $active -eq 0 ]]; then
 fi
 [[ $active -eq 1 ]] || exit 0
 
-# skip agents that already embed the static conduct block in their definition
+# skip agents that already embed the static conduct block in their definition.
+# Plugin agents live under plugins/marketplaces/<mp>/plugins/<plugin>/agents/ (and a
+# cache/ mirror); their agent_type may be namespaced ("plugin:name"), so match on the
+# bare name. Worst case on a miss is a harmless double injection.
 if [[ -n "$AGENT_TYPE" ]]; then
-  for d in "$CWD" "$HOME"; do
-    [[ -n "$d" ]] || continue
-    f="$d/.claude/agents/$AGENT_TYPE.md"
+  BARE="${AGENT_TYPE##*:}"
+  for f in "$CWD/.claude/agents/$AGENT_TYPE.md" \
+           "$HOME/.claude/agents/$AGENT_TYPE.md" \
+           "$HOME/.claude/plugins/marketplaces"/*/plugins/*/agents/"$BARE".md \
+           "$HOME/.claude/plugins/cache"/*/plugins/*/agents/"$BARE".md; do
     [[ -f "$f" ]] && grep -q 'fable-like-conduct' "$f" && exit 0
   done
 fi

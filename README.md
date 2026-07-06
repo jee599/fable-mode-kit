@@ -79,9 +79,9 @@ smoke-tests the hooks before finishing.
 | piece | file | role |
 |---|---|---|
 | SessionStart hook | `hooks/fable-detect.sh` | auto-detects Opus sessions → arms fable-mode |
-| UserPromptSubmit hook | `hooks/fable-context.sh` | re-injects Fable conduct norms **every turn** (adherence dilutes over long contexts) |
+| UserPromptSubmit hook | `hooks/fable-context.sh` | re-injects Fable conduct norms every turn — **adaptive since v1.4**: full ~1.4k-char block on major turns / session start / every 5th turn, a ~0.2k-char reminder on minor turns (−84% injection overhead on simple Q&A turns); logs every injection to `state/fable-mode/stats/` |
 | SubagentStart hook | `hooks/fable-subagent.sh` | injects an identity-neutral conduct block into **every subagent** at spawn (built-in, custom, and workflow agents — they never see UserPromptSubmit injections) |
-| Stop hook | `hooks/fable-stop-verify.sh` | forces **one** self-verification pass per major turn (verify-before-report, conclusion-first final message, scope check) |
+| Stop hook | `hooks/fable-stop-verify.sh` | forces **one** self-verification pass per major turn (verify-before-report, conclusion-first final message, scope check) + **deterministic leak guard since v1.4**: greps the final message for internal-guidance vocabulary and forces one rewrite if the self-check echoed into user output |
 | output style | `output-styles/fable-like.md` | system-prompt-level port of the norms |
 | skill | `skills/fable-mode/` | `/fable-mode on\|off\|status` manual toggle |
 | wrapper | `bin/claude-fablelike` | one-shot: Opus + xhigh effort + output style + hooks |
@@ -99,6 +99,10 @@ smoke-tests the hooks before finishing.
   use in cron jobs and cheap one-shot wrappers (the Stop self-check adds one extra
   turn per major prompt, which you may not want on a timeout budget).
 - **Force on**: `export FABLE_MODE=1` (what `claude-fablelike` does) or `/fable-mode on`.
+- **Overhead telemetry** (v1.4): every injection appends `type<TAB>chars` to
+  `~/.claude/state/fable-mode/stats/<session-id>.tsv`; `/fable-mode status` reports the
+  session's full/lite counts and the token overhead they cost. Measured block sizes:
+  full 1,377 chars (≈860 tokens), lite 214 chars (≈135 tokens).
 - The injected block tells the model it is Opus (prevents identity leakage into task
   output) and forbids mentioning the norms/self-check in user-facing text — both were
   real observed failure modes, fixed and re-verified.
@@ -106,7 +110,9 @@ smoke-tests the hooks before finishing.
 ## Honest limits
 
 - 97% is a *conduct* score on tasks chosen to expose conduct differences — it is not
-  an intelligence benchmark. Sample: 3 tasks × 1 run per condition.
+  an intelligence benchmark. Sample: 3 tasks × 1 run per condition, plus a no-tool
+  Q&A probe added 2026-07-06 (kit answer ≈85–90% equivalent to Fable's at 49% of its
+  cost on that task; deliverable equivalence on the tool tasks measured 80–95%).
 - The stack reaches the norms via correction turns (8 vs 4 turns on one task); Fable
   gets there on the first attempt. You pay turns, not quality.
 - Entangled first-pass reasoning and long autonomous runs keep a real gap. For

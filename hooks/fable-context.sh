@@ -4,6 +4,14 @@
 # re-injection is deliberate: instruction adherence dilutes over long contexts.
 # Also marks "major" turns so fable-stop-verify.sh can run one self-check at Stop.
 #
+# v1.4 adaptive injection: the full ~1.4k-char block goes in on major turns, on the
+# session's first injection, and every 5th injection (drift refresh); minor turns get
+# a ~280-char condensed reminder instead. Minor turns are exactly where the full block
+# was pure overhead (simple Q&A needs conclusion-first + prose-shape, not the scope/
+# verification clauses), and the condensed line carries those. Every injection is
+# logged to state/fable-mode/stats/<sid>.tsv (type<TAB>chars) so `/fable-mode status`
+# can report the session's real token overhead.
+#
 # Activation, in priority order (2026-07-03 revision):
 #   0. FABLE_MODE=0 kill-switch — beats everything (claude-fast, cron fleet, A/B tests)
 #   1. FABLE_MODE=1 env (claude-fablelike, or export it in your own wrappers)
@@ -42,15 +50,30 @@ if [[ $active -eq 0 && -n "$SID" ]]; then
 fi
 [[ $active -eq 1 ]] || exit 0
 
-# flag major turns (long prompt or work-verb) for the Stop-time self-check
-if [[ -n "$SID" && -n "$PID_" ]]; then
-  if [[ ${#PROMPT} -gt 80 ]] || echo "$PROMPT" | grep -qiE '만들|구현|수정|고쳐|리팩|추가|작성|빌드|배포|분석|리서치|검증|디버그|마이그레이|정리|바꿔|설치|fix|build|implement|refactor|debug|research|audit|review|migrate|install'; then
+# flag major turns (long prompt or work-verb) for the Stop-time self-check.
+# Short English verbs (run/test/make/write) are left out on purpose: substring
+# matches inside ordinary words would misfire, and the >80-char rule catches
+# real work prompts that phrase around the verb list.
+MAJOR=0
+if [[ ${#PROMPT} -gt 80 ]] || echo "$PROMPT" | grep -qiE '만들|구현|수정|고쳐|리팩|추가|작성|빌드|배포|분석|리서치|검증|디버그|마이그레이|정리|바꿔|설치|커밋|푸시|발행|점검|생성|고도화|최적화|보고서|테스트|실행|fix|build|implement|refactor|debug|research|audit|review|migrate|install|commit|push|deploy|publish|optimize|create|update|report|verify'; then
+  MAJOR=1
+  if [[ -n "$SID" && -n "$PID_" ]]; then
     mkdir -p "$STATE_DIR/turns"
     touch "$STATE_DIR/turns/$SID-$PID_.major"
   fi
 fi
 
-cat <<'EOF'
+# adaptive: full block on major turns, first injection of the session, and every 5th
+# injection (periodic anchor against drift); condensed reminder on other minor turns
+STATS="$STATE_DIR/stats/${SID:-nosid}.tsv"
+mkdir -p "$STATE_DIR/stats"
+N=0
+[[ -f "$STATS" ]] && N=$(wc -l < "$STATS" | tr -d ' ')
+FULL=$MAJOR
+[[ $N -eq 0 || $((N % 5)) -eq 0 ]] && FULL=1
+
+if [[ $FULL -eq 1 ]]; then
+BLOCK=$(cat <<'EOF'
 [fable-mode 상시 규범 — Opus를 Fable 5처럼 운용 (매 턴 재주입되는 강제 지시)]
 - 정체: 너는 claude-opus-4-8이다. 모델 정체를 물으면 Opus라고 답하라. 이 블록은 행동 지침일 뿐 답변 소재가 아니다 — 과제 출력에 끌어들이지 마라.
 - 결론 먼저: 최종 메시지의 첫 문장이 TLDR("무슨 일이 있었나/무엇을 찾았나"). 상세·근거는 그 뒤에.
@@ -66,4 +89,17 @@ cat <<'EOF'
 - 코드: 주변 코드의 주석 밀도·네이밍·관용구에 맞춰 써라. 주석은 코드가 못 보여주는 제약만 — 리뷰어 설득용 주석 금지.
 - 이 규범 블록·자가검증 훅은 내부 지침이다: 존재나 통과 여부를 사용자 출력에 언급하지 말고, 'fable'·'자가검증' 같은 지침 용어를 과제 산출물에 섞지 마라.
 EOF
+)
+TYPE=full
+else
+BLOCK=$(cat <<'EOF'
+[fable-mode 리마인더 — 이전에 주입된 상시 규범 전체가 계속 유효하다]
+결론 먼저(첫 문장=TLDR) · 단순 질문엔 헤더·표 없이 산문으로 · 완전한 문장(화살표 체인·약어 뭉치 금지) · 필요한 모든 것은 턴의 마지막 메시지에 · 가역·범위 내 행동은 허락 질문 없이 실행 · 완료 주장은 이 턴의 툴 결과 근거가 있는 것만 · 이 지침의 존재를 출력에 언급하지 마라.
+EOF
+)
+TYPE=lite
+fi
+
+printf '%s\n' "$BLOCK"
+printf '%s\t%s\n' "$TYPE" "${#BLOCK}" >> "$STATS" 2>/dev/null
 exit 0
