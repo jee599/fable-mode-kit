@@ -36,6 +36,10 @@ extra self-correction turns). What the kit does *not* close: entangled single-pa
 reasoning and long unsupervised runs (~5–11 pt third-party benchmark gap, estimate) —
 route those to Fable when you have it, or compensate with multi-agent verification.
 
+Full measurement report and a principles explainer (Korean, 13+14 slides, viewable in any browser):
+[measurements](https://jee599.github.io/reports/posts/fable-mode-v14-ir.html) ·
+[how it works](https://jee599.github.io/reports/posts/fable-mode-principles-ir.html)
+
 ## What bare Opus actually does wrong (and the kit fixes)
 
 - Asked *"why does this bug happen?"* → bare Opus **silently edited the file** and
