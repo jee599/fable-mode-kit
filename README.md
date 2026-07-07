@@ -1,140 +1,286 @@
-# fable-mode — make Opus behave like Fable 5 in Claude Code
+<h1 align="center">
+  <br>
+  ⚡ fable-mode
+  <br>
+</h1>
 
-## Quick start — 2 lines, zero config
+<h3 align="center">
+  Claude Fable 5 costs exactly 2× Opus 4.8 — but half of "Fable-ness" is just instructions.<br>
+  This kit ports them. <code>/plugin install fable-mode@jidonglab</code> → next session, done.
+</h3>
 
-Inside any Claude Code session:
+<p align="center">
+  <img src="https://img.shields.io/badge/version-v1.4-blue?style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/badge/conduct_fidelity-64%25→97%25-brightgreen?style=flat-square" alt="Conduct" />
+  <img src="https://img.shields.io/badge/cost-0.72×_Fable-orange?style=flat-square" alt="Cost" />
+  <img src="https://img.shields.io/badge/branch_checks-14%2F14-brightgreen?style=flat-square" alt="Tests" />
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/jee599/fable-mode-kit?style=flat-square" alt="License" /></a>
+</p>
 
-```
-/plugin marketplace add jee599/fable-mode-kit
-/plugin install fable-mode@jidonglab
-```
-
-Done. From your next session on, **any Opus session is auto-detected** and runs under
-Fable 5 conduct norms — nothing to configure, no settings.json edits. Fable sessions
-are detected too and left untouched. Opt out anytime with `export FABLE_MODE=0`,
-toggle with `/fable-mode on|off|status`. Only requirement: `jq`
-(`brew install jq` — if missing, the plugin tells you at session start instead of
-failing silently).
+<p align="center">
+  <a href="#-see-the-difference">Examples</a> •
+  <a href="#-the-numbers-no-cherry-picking">Benchmark</a> •
+  <a href="#%EF%B8%8F-how-it-works">How it works</a> •
+  <a href="#-reports">Reports</a> •
+  <a href="docs/README.ko.md">한국어</a> •
+  <a href="docs/README.ja.md">日本語</a> •
+  <a href="docs/README.zh.md">中文</a>
+</p>
 
 ---
 
-Claude Fable 5 costs exactly 2× Opus 4.8 ($10/$50 vs $5/$25 per Mtok). The measurable
-difference between them splits into two parts: **a Fable-only system-prompt conduct layer**
-(portable) and **model weights** (not portable). This kit ports the first part.
+```
+  bare Opus, asked "why is this buggy?"   →   silently EDITS your file, asserts untested results
+  bare Opus, asked "clean this up"        →   investigates, then stalls: "which way would you like?"
+  Opus + fable-mode                       →   diagnoses only · acts on safe defaults · proves claims
 
-Measured result (author's A/B/C probes, same 3 tasks · same effort · judged on a
-6-dimension conduct rubric, 36 pts):
+  conduct fidelity  64% → 97%      cost  72% of Fable      deliverable equivalence  80–95%
+```
 
-| condition | score | conduct fidelity |
-|---|---|---|
-| bare Opus 4.8 | 23/36 | 64% |
-| Opus 4.8 + this kit | **35/36** | **97%** |
-| real Fable 5 (baseline) | 36/36 | 100% |
-
-Same-task measured cost with the kit was **71–78% of Fable** (half unit price, minus
-extra self-correction turns). What the kit does *not* close: entangled single-pass
-reasoning and long unsupervised runs (~5–11 pt third-party benchmark gap, estimate) —
-route those to Fable when you have it, or compensate with multi-agent verification.
-
-Full measurement report and a principles explainer (Korean, 13+14 slides, viewable in any browser):
-[measurements](https://jee599.github.io/reports/posts/fable-mode-v14-ir.html) ·
-[how it works](https://jee599.github.io/reports/posts/fable-mode-principles-ir.html)
-
-## What bare Opus actually does wrong (and the kit fixes)
-
-- Asked *"why does this bug happen?"* → bare Opus **silently edited the file** and
-  asserted results without running anything. With the kit: diagnosis only, verified by
-  execution. (measured 6/12 → 12/12)
-- Given an ambiguous *"clean up these log files"* → bare Opus investigated, then ended
-  with *"which way would you like?"* — zero action. With the kit: executes a
-  non-destructive default, verifies, defers only the destructive part. (5/12 → 12/12)
-
-## Install
-
-**Route A — plugin (recommended).** Inside any Claude Code session:
+<h3 align="center">⬇️ Two lines inside any Claude Code session. Zero config.</h3>
 
 ```
 /plugin marketplace add jee599/fable-mode-kit
 /plugin install fable-mode@jidonglab
 ```
 
-Hooks, the `/fable-mode` skill, and the `fable-like` output style register
-automatically; update later with `/plugin update`, remove with `/plugin uninstall`.
-The `claude-fablelike` wrapper is not part of the plugin — grab it from `bin/` if
-you want the one-shot launcher, or just run `claude --model claude-opus-4-8
---effort xhigh --settings '{"outputStyle":"fable-like"}'`.
+<p align="center">
+  From your next session on, <b>every Opus session is auto-detected</b> and runs under Fable 5 conduct norms.<br>
+  Fable sessions are detected too and left untouched. Only requirement: <code>jq</code>.
+</p>
 
-**Route B — classic installer** (no plugin system, or you want the wrapper installed):
+<details>
+<summary>Classic installer (no plugin system, or you want the <code>claude-fablelike</code> wrapper)</summary>
 
 ```bash
 git clone https://github.com/jee599/fable-mode-kit && cd fable-mode-kit && ./install.sh
 ```
 
-Requires: Claude Code CLI, `jq`, bash (macOS/Linux). The installer is idempotent,
-merges (never overwrites) your `~/.claude/settings.json`, backs it up first, and
-smoke-tests the hooks before finishing.
+Requires: Claude Code CLI, `jq`, bash (macOS/Linux). Idempotent; merges (never overwrites)
+your `~/.claude/settings.json`, backs it up first, and smoke-tests the hooks before finishing.
 
-> Pick **one** route. Installing both registers the hooks twice and the norms get
-> injected twice per turn (harmless but wasteful). `uninstall.sh` only removes the
-> classic install; `/plugin uninstall` only removes the plugin.
+> [!WARNING]
+> Pick **one** route. Installing both registers the hooks twice and the norms get injected
+> twice per turn (harmless but wasteful). `uninstall.sh` only removes the classic install;
+> `/plugin uninstall` only removes the plugin.
 
-## What gets installed
+</details>
+
+## 👀 See the Difference
+
+Both failures below are real, measured runs — not hypotheticals.
+
+### 🔍 Asked *"why does this bug happen?"* — 6/12 → 12/12
+
+<table>
+<tr>
+<td width="50%">
+
+**❌ bare Opus 4.8**
+```
+Silently edits your file.
+Asserts the fix works —
+without running anything.
+
+(You asked a question.
+ It rewrote your code.)
+```
+
+</td>
+<td width="50%">
+
+**✅ with fable-mode**
+```
+Diagnoses only — no edits.
+Runs the code to prove
+the root cause.
+
+Reports conclusion first,
+evidence after.
+```
+
+</td>
+</tr>
+</table>
+
+### 🧹 Asked an ambiguous *"clean up these log files"* — 5/12 → 12/12
+
+<table>
+<tr>
+<td width="50%">
+
+**❌ bare Opus 4.8**
+```
+Investigates thoroughly.
+Then ends with:
+"which way would you like?"
+
+Zero action taken.
+```
+
+</td>
+<td width="50%">
+
+**✅ with fable-mode**
+```
+Executes a non-destructive
+default, verifies it,
+defers only the destructive
+part to you.
+```
+
+</td>
+</tr>
+</table>
+
+## 📊 The Numbers (No Cherry-Picking)
+
+**Conduct fidelity** — same tasks, same effort, judged on a 6-dimension rubric (36 pts):
+
+| condition | score | fidelity |
+|:---|:---:|:---:|
+| bare Opus 4.8 | 23/36 | 64% |
+| **Opus 4.8 + fable-mode** | **35/36** | **97%** |
+| real Fable 5 (baseline) | 36/36 | 100% |
+
+**Cost + deliverable equivalence** — 4 task types × 3 conditions, tokens from transcript
+`usage`, official per-Mtok pricing (Opus $5/$25, Fable $10/$50):
+
+| task | bare Opus | + kit | Fable 5 | kit vs Fable | equivalence |
+|:---|---:|---:|---:|:---:|:---:|
+| diagnosis | $0.23 | $0.28 | $0.49 | 57% | ~95% |
+| implementation | $0.34 | $0.45 | $0.49 | 💀 91% | ~90% |
+| ambiguous cleanup | $0.86 | $1.13 | $1.52 | 74% | ~80% |
+| simple Q&A | $0.12 | $0.13 | $0.27 | 🏆 49% | ~85% |
+| **total** | **$1.54** | **$1.99** | **$2.77** | **72%** | **80–95%** |
+
+> [!NOTE]
+> The ugly numbers stay in the table. On the implementation task the kit's cost win over
+> Fable was only 9%. On the ambiguous task the kit spent **31% more than bare Opus** —
+> that's the price of the self-correction turns that buy the conduct. Fable writes half
+> the output tokens (9.8k vs 20.0k) and still loses on cost because its unit price is 2×.
+> All three implementation outputs (bare / kit / Fable) produced **identical results** on
+> shared test cases.
+
+## 🆚 Why Not Just an Output Style?
+
+An output style is one of the three layers — it's not enough alone:
+
+| | CLAUDE.md rules | output style | **fable-mode hooks** |
+|:---|:---:|:---:|:---:|
+| Survives long-context dilution | ❌ | 🟡 | ✅ per-turn re-injection |
+| Covers subagents (Explore/Plan/custom/workflows) | ❌ | ❌ | ✅ SubagentStart |
+| Forces end-of-turn self-verification | ❌ | ❌ | ✅ Stop `decision:block` |
+| Deterministic leak guard (grep, not trust) | ❌ | ❌ | ✅ v1.4 |
+| Auto-detects Opus sessions, stands down on Fable | ❌ | ❌ | ✅ |
+| Injection overhead telemetry | ❌ | ❌ | ✅ v1.4 |
+
+## ⚙️ How It Works
+
+Four shell scripts grab four moments of the session lifecycle. No daemon, no proxy —
+state is empty marker files.
+
+```
+  ┌──────────────────────────────────────────────────────────────┐
+  │  SessionStart      fable-detect.sh                           │
+  │    "is this Opus?" — flag → settings → transcript fallback   │
+  │           ↓                                                  │
+  │  UserPromptSubmit  fable-context.sh          (every turn)    │
+  │    re-injects 13 conduct norms — adaptive since v1.4:        │
+  │    major turns = full block · minor turns = −84% reminder    │
+  │           ↓                                                  │
+  │  SubagentStart     fable-subagent.sh         (every spawn)   │
+  │    subagents never see UserPromptSubmit → inject at spawn    │
+  │           ↓                                                  │
+  │  Stop              fable-stop-verify.sh      (major turns)   │
+  │    blocks the turn ONCE: verify claims, finish conclusion-   │
+  │    first · then greps the final text for norm leakage        │
+  └──────────────────────────────────────────────────────────────┘
+```
+
+The principle: Fable's edge splits into **instructions** (text → portable) and
+**weights** (reasoning depth → not portable). The hooks port the instructions and
+keep them anchored; the weights gap you route around — send entangled reasoning and
+long autonomous runs to real Fable, or compensate with fan-out + adversarial
+verification.
+
+## 📈 Watch the Overhead
+
+Every injection is logged. `/fable-mode status` reports what the kit actually costs you:
+
+```bash
+$ /fable-mode status
+GLOBAL marker: off · this session: auto-detected (claude-opus-4-8)
+injections: full 4 × 1,377 chars · lite 11 × 214 chars
+overhead ≈ 4,900 tokens this session (v1.3 would have been ≈ 12,900)
+```
+
+## 🛡️ Controls & Safety
+
+| | |
+|:---|:---|
+| 🔴 `FABLE_MODE=0` | kill-switch — **beats every activation path** (use in cron/one-shots) |
+| 🟢 `FABLE_MODE=1` | force on (what `claude-fablelike` exports) |
+| 🔍 real Fable session | auto-detected from the transcript → hooks **stand down**, no double injection |
+| 🔁 `/fable-mode on\|off\|status` | manual toggle + telemetry |
+| 🏷️ identity | injected block says "you are Opus" — no Fable impersonation in task output |
+
+> [!IMPORTANT]
+> The Stop self-check adds **one extra turn per major prompt**. That's most of the kit's
+> cost — and why you should `export FABLE_MODE=0` on timeout-budgeted headless runs.
+
+<details>
+<summary>📦 What gets installed (8 pieces)</summary>
 
 | piece | file | role |
 |---|---|---|
 | SessionStart hook | `hooks/fable-detect.sh` | auto-detects Opus sessions → arms fable-mode |
-| UserPromptSubmit hook | `hooks/fable-context.sh` | re-injects Fable conduct norms every turn — **adaptive since v1.4**: full ~1.4k-char block on major turns / session start / every 5th turn, a ~0.2k-char reminder on minor turns (−84% injection overhead on simple Q&A turns); logs every injection to `state/fable-mode/stats/` |
-| SubagentStart hook | `hooks/fable-subagent.sh` | injects an identity-neutral conduct block into **every subagent** at spawn (built-in, custom, and workflow agents — they never see UserPromptSubmit injections) |
-| Stop hook | `hooks/fable-stop-verify.sh` | forces **one** self-verification pass per major turn (verify-before-report, conclusion-first final message, scope check) + **deterministic leak guard since v1.4**: greps the final message for internal-guidance vocabulary and forces one rewrite if the self-check echoed into user output |
+| UserPromptSubmit hook | `hooks/fable-context.sh` | re-injects conduct norms every turn — adaptive since v1.4: full ~1.4k-char block on major turns / session start / every 5th turn, ~0.2k-char reminder on minor turns (−84%); logs every injection to `state/fable-mode/stats/` |
+| SubagentStart hook | `hooks/fable-subagent.sh` | identity-neutral conduct block into every subagent at spawn |
+| Stop hook | `hooks/fable-stop-verify.sh` | one self-verification pass per major turn + deterministic leak guard (v1.4) |
 | output style | `output-styles/fable-like.md` | system-prompt-level port of the norms |
 | skill | `skills/fable-mode/` | `/fable-mode on\|off\|status` manual toggle |
 | wrapper | `bin/claude-fablelike` | one-shot: Opus + xhigh effort + output style + hooks |
-| optional | `agents/conduct-snippet.md` | fallback for environments without SubagentStart support (CLI < ~2.1.2xx); agents whose definition already contains it are auto-skipped by the hook (no double injection) |
+| optional | `agents/conduct-snippet.md` | fallback for CLIs without SubagentStart; marked agents are auto-skipped (no double injection) |
 
-## Behavior & controls
+</details>
 
-- **Auto**: any session on an Opus model gets the norms; Fable sessions are detected
-  and left untouched (no double injection).
-- **Subagent coverage**: the SubagentStart hook covers agents spawned by the Agent
-  tool and workflows, so conduct norms hold across fan-out work — the previous gap
-  where subagents ran bare. The injected block is identity-neutral (a subagent may
-  run a different model than the session).
-- **Off switch**: `export FABLE_MODE=0` disables everything for that process tree —
-  use in cron jobs and cheap one-shot wrappers (the Stop self-check adds one extra
-  turn per major prompt, which you may not want on a timeout budget).
-- **Force on**: `export FABLE_MODE=1` (what `claude-fablelike` does) or `/fable-mode on`.
-- **Overhead telemetry** (v1.4): every injection appends `type<TAB>chars` to
-  `~/.claude/state/fable-mode/stats/<session-id>.tsv`; `/fable-mode status` reports the
-  session's full/lite counts and the token overhead they cost. Measured block sizes:
-  full 1,377 chars (≈860 tokens), lite 214 chars (≈135 tokens).
-- The injected block tells the model it is Opus (prevents identity leakage into task
-  output) and forbids mentioning the norms/self-check in user-facing text — both were
-  real observed failure modes, fixed and re-verified.
+## 📉 Honest Limits
 
-## Honest limits
+- **97% is a conduct score**, not an intelligence benchmark. Sample: 4 task types ×
+  1 run per condition (diagnosis + implementation re-measured 2026-07-07 on v1.4).
+- The kit reaches the norms via correction turns (8 vs 4 turns on one task); Fable gets
+  there on the first attempt. **You pay turns, not quality.**
+- Entangled first-pass reasoning and long autonomous runs keep a real gap
+  (~5–11 pt third-party benchmark estimate). Route those to Fable, or compensate with
+  fan-out + adversarial verification (1–2.5× a single Fable run, estimate).
 
-- 97% is a *conduct* score on tasks chosen to expose conduct differences — it is not
-  an intelligence benchmark. Sample: 3 tasks × 1 run per condition, plus a no-tool
-  Q&A probe added 2026-07-06 (kit answer ≈85–90% equivalent to Fable's at 49% of its
-  cost on that task; deliverable equivalence on the tool tasks measured 80–95%).
-  Diagnosis + implementation re-measured 2026-07-07 on v1.4: aggregate cost across
-  the 4 task types = **72% of Fable**, with all three slugify implementations
-  producing identical output on shared test cases.
-- The stack reaches the norms via correction turns (8 vs 4 turns on one task); Fable
-  gets there on the first attempt. You pay turns, not quality.
-- Entangled first-pass reasoning and long autonomous runs keep a real gap. For
-  review/audit work, compensate with fan-out + adversarial verification (costs
-  1–2.5× a single Fable run, estimate); for high-stakes decisions, N attempts +
-  a judge pass + human gate.
+## 📑 Reports
 
-## Uninstall
+Full measurement deck and a principles explainer (Korean, 13 + 14 slides, open in any browser):
+
+- **[Measurements — v1.4 benchmark](https://jee599.github.io/reports/posts/fable-mode-v14-ir.html)** ([PDF](https://jee599.github.io/reports/posts/fable-mode-v14-ir.pdf))
+- **[How it works — principles](https://jee599.github.io/reports/posts/fable-mode-principles-ir.html)** ([PDF](https://jee599.github.io/reports/posts/fable-mode-principles-ir.pdf))
+
+## 🧹 Uninstall
 
 ```bash
-./uninstall.sh
+./uninstall.sh          # classic install — removes files, deregisters hooks, deletes state
+/plugin uninstall       # plugin route
 ```
 
-Removes all files, deregisters the hooks (settings.json backed up again), deletes state.
-
-## License
+## 📜 License
 
 MIT
+
+---
+
+<p align="center">
+  <b>⚡ 97% of the conduct at half the unit price — and it knows what it can't port.</b>
+</p>
+
+<p align="center">
+  <a href="https://github.com/jee599/fable-mode-kit">
+    <img src="https://img.shields.io/badge/GitHub-⭐_Star_this_repo-yellow?style=for-the-badge&logo=github" alt="Star" />
+  </a>
+</p>
