@@ -10,10 +10,9 @@
 </h3>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.4-blue?style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/badge/version-v1.5-blue?style=flat-square" alt="Version" />
   <img src="https://img.shields.io/badge/conduct_fidelity-64%25→97%25-brightgreen?style=flat-square" alt="Conduct" />
   <img src="https://img.shields.io/badge/cost-0.72×_Fable-orange?style=flat-square" alt="Cost" />
-  <img src="https://img.shields.io/badge/branch_checks-14%2F14-brightgreen?style=flat-square" alt="Tests" />
   <a href="LICENSE"><img src="https://img.shields.io/github/license/jee599/fable-mode-kit?style=flat-square" alt="License" /></a>
 </p>
 
@@ -154,13 +153,17 @@ part to you.
 | simple Q&A | $0.12 | $0.13 | $0.27 | 🏆 49% | ~85% |
 | **total** | **$1.54** | **$1.99** | **$2.77** | **72%** | **80–95%** |
 
+> Cells show rounded per-run values; totals and × ratios are computed from unrounded raw
+> values, so recomputing from the displayed cells can differ by ±1 in the last digit.
+
 > [!NOTE]
 > The ugly numbers stay in the table. On the implementation task the kit's cost win over
 > Fable was only 9%. On the ambiguous task the kit spent **31% more than bare Opus** —
 > that's the price of the self-correction turns that buy the conduct. Fable writes half
 > the output tokens (9.8k vs 20.0k) and still loses on cost because its unit price is 2×.
 > All three implementation outputs (bare / kit / Fable) produced **identical results** on
-> shared test cases.
+> shared test cases. These figures were measured on v1.4; v1.5 removes the Stop hook's
+> extra generation pass on major turns, so its cost is the same or lower.
 
 ## 🆚 Why Not Just an Output Style?
 
@@ -170,31 +173,36 @@ An output style is one of the three layers — it's not enough alone:
 |:---|:---:|:---:|:---:|
 | Survives long-context dilution | ❌ | 🟡 | ✅ per-turn re-injection |
 | Covers subagents (Explore/Plan/custom/workflows) | ❌ | ❌ | ✅ SubagentStart |
-| Forces end-of-turn self-verification | ❌ | ❌ | ✅ Stop `decision:block` |
-| Deterministic leak guard (grep, not trust) | ❌ | ❌ | ✅ v1.4 |
+| Pre-finish self-check every major turn | ❌ | ❌ | ✅ injected in-context (no extra pass) |
+| Norm leakage kept out of output | ❌ | ❌ | ✅ leak vector removed at the source |
 | Auto-detects Opus sessions, stands down on Fable | ❌ | ❌ | ✅ |
 | Injection overhead telemetry | ❌ | ❌ | ✅ v1.4 |
 
 ## ⚙️ How It Works
 
-Four shell scripts grab four moments of the session lifecycle. No daemon, no proxy —
-state is empty marker files.
+Three live hooks grab three moments of the session lifecycle; a fourth (Stop) is a
+retired no-op stub. No daemon, no proxy — state is empty marker files.
 
 ```
   ┌──────────────────────────────────────────────────────────────┐
   │  SessionStart      fable-detect.sh                           │
-  │    "is this Opus?" — flag → settings → transcript fallback   │
+  │    "is this Opus?" — input .model → ancestor --model flag    │
+  │    → settings.json (a guess → neutral announcement)          │
   │           ↓                                                  │
   │  UserPromptSubmit  fable-context.sh          (every turn)    │
-  │    re-injects 13 conduct norms — adaptive since v1.4:        │
-  │    major turns = full block · minor turns = −84% reminder    │
+  │    per-turn transcript detection (mid-session /model         │
+  │    switches, Fable stand-down) + re-injects the conduct      │
+  │    norms — adaptive: major = full block · minor = −86%       │
+  │    reminder. Full block's last bullet is the pre-finish      │
+  │    self-check (in-context, no extra generation pass)         │
   │           ↓                                                  │
   │  SubagentStart     fable-subagent.sh         (every spawn)   │
   │    subagents never see UserPromptSubmit → inject at spawn    │
-  │           ↓                                                  │
-  │  Stop              fable-stop-verify.sh      (major turns)   │
-  │    blocks the turn ONCE: verify claims, finish conclusion-   │
-  │    first · then greps the final text for norm leakage        │
+  │                                                              │
+  │  Stop              fable-stop-verify.sh      (retired stub)  │
+  │    no-op — kept registered so re-enabling is a one-file      │
+  │    git revert; the self-check it used to force now lives     │
+  │    in the block above                                        │
   └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -211,8 +219,8 @@ Every injection is logged. `/fable-mode status` reports what the kit actually co
 ```bash
 $ /fable-mode status
 GLOBAL marker: off · this session: auto-detected (claude-opus-4-8)
-injections: full 4 × 1,377 chars · lite 11 × 214 chars
-overhead ≈ 4,900 tokens this session (v1.3 would have been ≈ 12,900)
+injections: full 4 × 1,636 chars · lite 11 × 234 chars
+overhead ≈ 5,700 tokens this session (all-full, no adaptive lite, ≈ 15,300)
 ```
 
 ## 🛡️ Controls & Safety
@@ -223,25 +231,27 @@ overhead ≈ 4,900 tokens this session (v1.3 would have been ≈ 12,900)
 | 🟢 `FABLE_MODE=1` | force on (what `claude-fablelike` exports) |
 | 🔍 real Fable session | auto-detected from the transcript → hooks **stand down**, no double injection |
 | 🔁 `/fable-mode on\|off\|status` | manual toggle + telemetry |
-| 🏷️ identity | injected block says "you are Opus" — no Fable impersonation in task output |
+| ✅ self-check | pre-finish self-check rides the full block — in-context, invisible to the user, **no extra generation pass** |
+| 🏷️ identity | asserts "you are Opus" **only when the session model is confirmed** (`FABLE_MODE=1`, or the transcript shows an Opus turn). An unconfirmed guess (settings.json at turn 1) gets a neutral identity line — never claims Opus on a session that might be Fable |
 
 > [!IMPORTANT]
-> The Stop self-check adds **one extra turn per major prompt**. That's most of the kit's
-> cost — and why you should `export FABLE_MODE=0` on timeout-budgeted headless runs.
+> v1.5 retired the Stop hook, so there's no longer an extra generation pass per major
+> turn — the per-turn injection is the only overhead. Still `export FABLE_MODE=0` on
+> timeout-budgeted headless runs to skip injection entirely.
 
 <details>
 <summary>📦 What gets installed (8 pieces)</summary>
 
 | piece | file | role |
 |---|---|---|
-| SessionStart hook | `hooks/fable-detect.sh` | auto-detects Opus sessions → arms fable-mode |
-| UserPromptSubmit hook | `hooks/fable-context.sh` | re-injects conduct norms every turn — adaptive since v1.4: full ~1.4k-char block on major turns / session start / every 5th turn, ~0.2k-char reminder on minor turns (−84%); logs every injection to `state/fable-mode/stats/` |
+| SessionStart hook | `hooks/fable-detect.sh` | auto-detects Opus sessions → arms fable-mode (settings.json fallback arms neutrally — it's a guess) |
+| UserPromptSubmit hook | `hooks/fable-context.sh` | re-injects conduct norms every turn — adaptive: full ~1.6k-char block (with the pre-finish self-check) on major turns / session start / every 5th turn, ~0.2k-char reminder on minor turns (−86%); logs every injection to `state/fable-mode/stats/` |
 | SubagentStart hook | `hooks/fable-subagent.sh` | identity-neutral conduct block into every subagent at spawn |
-| Stop hook | `hooks/fable-stop-verify.sh` | one self-verification pass per major turn + deterministic leak guard (v1.4) |
+| Stop hook | `hooks/fable-stop-verify.sh` | retired no-op stub (v1.5) — kept registered so a one-file git revert re-enables it; the self-check it forced now rides the per-turn block |
 | output style | `output-styles/fable-like.md` | system-prompt-level port of the norms |
 | skill | `skills/fable-mode/` | `/fable-mode on\|off\|status` manual toggle |
 | wrapper | `bin/claude-fablelike` | one-shot: Opus + xhigh effort + output style + hooks |
-| optional | `agents/conduct-snippet.md` | fallback for CLIs without SubagentStart; marked agents are auto-skipped (no double injection) |
+| optional | `docs/conduct-snippet.md` | fallback for CLIs without SubagentStart; marked agents are auto-skipped (no double injection) |
 
 </details>
 

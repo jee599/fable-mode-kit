@@ -43,21 +43,26 @@ OUT=$(echo "{\"session_id\":\"$SID\",\"prompt_id\":\"t\",\"prompt\":\"hi\"}" | F
 [[ "$OUT" == *"상시 규범"* ]] || { echo "ERROR: fable-context.sh smoke test failed"; exit 1; }
 OUT=$(echo "{\"session_id\":\"$SID\",\"agent_type\":\"smoke-test\"}" | FABLE_MODE=1 bash "$CLAUDE_DIR/hooks/fable-subagent.sh")
 [[ "$OUT" == *"SubagentStart"* && "$OUT" == *"conduct norms"* ]] || { echo "ERROR: fable-subagent.sh smoke test failed"; exit 1; }
-rm -f "$CLAUDE_DIR/state/fable-mode/sessions/$SID" "$CLAUDE_DIR/state/fable-mode/turns/$SID"* 2>/dev/null || true
+rm -f "$CLAUDE_DIR/state/fable-mode/sessions/$SID" "$CLAUDE_DIR/state/fable-mode/turns/$SID"* "$CLAUDE_DIR/state/fable-mode/stats/$SID"* 2>/dev/null || true
 echo "   smoke test passed"
+case ":$PATH:" in
+  *":$BIN_DIR:"*) ;;
+  *) echo "   note: $BIN_DIR is not on PATH — add it to your shell profile to use claude-fablelike" ;;
+esac
 
 cat <<'EOF'
 
 Done. How it works:
   · Any session on an Opus model is auto-detected → Fable 5 conduct norms are
-    injected every turn + one self-verification pass at the end of major turns.
+    injected every turn (full block with a pre-finish self-check on major turns,
+    condensed reminder on minor turns).
   · Every subagent (built-in, custom, workflow) gets a conduct block at spawn
     via the SubagentStart hook — full-coverage, no agent-file edits needed.
   · Fable sessions are auto-detected too and left untouched.
   · Full stack (output style + xhigh effort):   claude-fablelike
   · Opt out for one command / cron / fast path: export FABLE_MODE=0
   · Manual toggle inside a session:             /fable-mode on|off|status
-  · Optional: agents/conduct-snippet.md — for environments without
+  · Optional: docs/conduct-snippet.md — for environments without
     SubagentStart hook support (old CLI, minimal -p setups).
 
 Uninstall: ./uninstall.sh

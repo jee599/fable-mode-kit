@@ -11,7 +11,7 @@ if [[ -f "$SETTINGS" ]] && grep -q "fable-" "$SETTINGS"; then
   cp "$SETTINGS" "$SETTINGS.bak-fable-uninstall-$(date +%Y%m%d%H%M%S)"
   tmp=$(mktemp)
   jq '
-    def strip: map(.hooks |= map(select(.command // "" | contains("fable-") | not)) | select(.hooks | length > 0));
+    def strip: map(.hooks |= map(select(.command // "" | test("fable-(detect|context|stop-verify|subagent)\\.sh") | not)) | select(.hooks | length > 0));
     if .hooks then
       .hooks |= with_entries(.value |= strip) |
       .hooks |= with_entries(select(.value | length > 0))

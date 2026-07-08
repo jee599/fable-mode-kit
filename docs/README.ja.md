@@ -14,10 +14,9 @@
 </h3>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.4-blue?style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/badge/version-v1.5-blue?style=flat-square" alt="Version" />
   <img src="https://img.shields.io/badge/conduct_fidelity-64%25→97%25-brightgreen?style=flat-square" alt="Conduct" />
   <img src="https://img.shields.io/badge/cost-0.72×_Fable-orange?style=flat-square" alt="Cost" />
-  <img src="https://img.shields.io/badge/branch_checks-14%2F14-brightgreen?style=flat-square" alt="Tests" />
 </p>
 
 ---
@@ -146,11 +145,15 @@ git clone https://github.com/jee599/fable-mode-kit && cd fable-mode-kit && ./ins
 | 単純な質問 | $0.12 | $0.13 | $0.27 | 🏆 49% | ~85% |
 | **合計** | **$1.54** | **$1.99** | **$2.77** | **72%** | **80–95%** |
 
+> セルは1実行あたりの丸め値。合計と × 比率は丸め前の生値から計算しているため、表示セルから
+> 再計算すると末尾桁で ±1 ずれることがある。
+
 > [!NOTE]
 > 不利な数字も表に残す。実装タスクでのキットのコスト優位はわずか9%だった。曖昧なタスクでは
 > キットが素の Opus より **31% 多く**使った — 行動を買う自己修正ターンの代償だ。Fable は
 > 出力トークンを半分しか使わない(9.8k vs 20.0k)のに単価2倍のためコストで負ける。実装成果物の
-> 3つ(素/キット/Fable)は共有テストケースで **すべて同一の出力**を生成した。
+> 3つ(素/キット/Fable)は共有テストケースで **すべて同一の出力**を生成した。この数字は v1.4 での
+> 実測で、v1.5 は major ターンでの Stop フックの追加生成パスを除去したため、コストは同等かそれ以下だ。
 
 ## 🆚 output style だけで十分では?
 
@@ -159,9 +162,9 @@ output style は3層のうちの1層にすぎない — 単独では不足だ:
 | | CLAUDE.md ルール | output style | **fable-mode フック** |
 |:---|:---:|:---:|:---:|
 | 長いコンテキストの希釈に耐える | ❌ | 🟡 | ✅ ターンごとの再注入 |
-| サブエージェントをカバー | ❌ | ❌ | ✅ SubagentStart |
-| ターン終了時の自己検証を強制 | ❌ | ❌ | ✅ Stop `decision:block` |
-| 決定論的リークガード (信頼でなく grep) | ❌ | ❌ | ✅ v1.4 |
+| サブエージェントをカバー (ビルトイン・カスタム・ワークフロー) | ❌ | ❌ | ✅ SubagentStart |
+| major ターンごとの仕上げ前自己点検 | ❌ | ❌ | ✅ コンテキスト内に注入 (追加パスなし) |
+| 規範リークを出力に出さない | ❌ | ❌ | ✅ リーク経路を根元で除去 |
 | Opus 自動検出、Fable では自動待機 | ❌ | ❌ | ✅ |
 | 注入オーバーヘッドのテレメトリ | ❌ | ❌ | ✅ v1.4 |
 
@@ -173,18 +176,21 @@ output style は3層のうちの1層にすぎない — 単独では不足だ:
 ```
   ┌──────────────────────────────────────────────────────────────┐
   │  SessionStart      fable-detect.sh                           │
-  │    「今 Opus か?」— フラグ → settings → transcript フォールバック │
+  │    「今 Opus か?」                                            │
+  │    入力 .model → 祖先の --model フラグ → settings.json         │
+  │    (settings は推測 → 中立に告知)                             │
   │           ↓                                                  │
   │  UserPromptSubmit  fable-context.sh          (毎ターン)      │
-  │    行動規範13条を再注入 — v1.4 から適応型:                     │
-  │    major ターン = フルブロック · minor ターン = −84% リマインダ │
+  │    行動規範を再注入 + トランスクリプトから毎ターンモデル再判定。 │
+  │    v1.4 から適応型 — major = フルブロック(末尾に仕上げ点検) ·   │
+  │    minor = −86% リマインダ                                    │
   │           ↓                                                  │
   │  SubagentStart     fable-subagent.sh         (スポーン毎)     │
   │    サブエージェントは毎ターン注入を見ない → スポーン時に注入     │
   │           ↓                                                  │
-  │  Stop              fable-stop-verify.sh      (major ターン)   │
-  │    ターン終了を1回ブロック: 主張を検証・結論優先で再仕上げ →     │
-  │    最終テキストを grep して規範のリークまで捕捉                 │
+  │  Stop              fable-stop-verify.sh      (引退・スタブ)   │
+  │    v1.5 で無効化 (no-op)。登録は維持 →                          │
+  │    復活は1ファイルの git revert                                │
   └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -192,6 +198,20 @@ output style は3層のうちの1層にすぎない — 単独では不足だ:
 移植不可)に分かれる。フックが指示文を移植してアンカーを保ち、重みのギャップはルーティングで
 迂回する — 絡み合った推論と長時間の自律実行だけを本物の Fable へ回すか、ファンアウト +
 敵対的検証で補正する。
+
+## 📈 オーバーヘッドを見る
+
+すべての注入が記録される。`/fable-mode status` がキットの実コストを報告する:
+
+```bash
+$ /fable-mode status
+GLOBAL マーカー: off · このセッション: 自動検出 (claude-opus-4-8)
+注入: full 4回 × 1,636字 · lite 11回 × 234字
+オーバーヘッド ≈ このセッション 5,700トークン (v1.3 なら ≈ 15,300)
+```
+
+セッションごとの stats は `state/fable-mode/stats/<sid>.tsv` に貯まり、full/lite の回数と
+文字数の合計を持つ。トークンは文字数 ÷ 1.6 で概算する(full ≈ 1,020 · lite ≈ 146 トークン)。
 
 ## 🛡️ 制御と安全装置
 
@@ -201,11 +221,28 @@ output style は3層のうちの1層にすぎない — 単独では不足だ:
 | 🟢 `FABLE_MODE=1` | 強制有効化 (`claude-fablelike` が export するもの) |
 | 🔍 本物の Fable セッション | トランスクリプトから自動検出 → フックは**待機**、二重注入なし |
 | 🔁 `/fable-mode on\|off\|status` | 手動トグル + テレメトリ |
-| 🏷️ アイデンティティ | 注入ブロックが「あなたは Opus」と固定 — タスク出力で Fable なりすましなし |
+| 🏷️ 条件付きアイデンティティ | セッションモデルを固定する経路(`FABLE_MODE=1`・トランスクリプトの opus 一致)でだけ「あなたは Opus」と主張。マーカーだけの推測起動には中立のアイデンティティ行を出す — settings の誤爆で Fable セッションに Opus を名乗らせない。タスク出力での Fable なりすましもなし |
 
 > [!IMPORTANT]
-> Stop 自己検証は **major プロンプトごとにターンを1つ追加**する。これがキットのコストの大半で、
-> タイムアウト予算のあるヘッドレス実行で `export FABLE_MODE=0` すべき理由だ。
+> v1.5 では仕上げ前の自己点検が Stop フックから毎ターンの注入(フルブロック末尾の点検項目)へ
+> 移った — ユーザーには見えず、追加の生成パスもない。Stop スクリプトは no-op スタブとして
+> 登録だけ残り、復活は1ファイルの git revert で済む。
+
+<details>
+<summary>📦 インストールされるもの (8個)</summary>
+
+| 構成 | ファイル | 役割 |
+|---|---|---|
+| SessionStart フック | `hooks/fable-detect.sh` | Opus セッションを自動検出 → fable-mode を装填 |
+| UserPromptSubmit フック | `hooks/fable-context.sh` | 毎ターン規範を再注入 — v1.4 から適応型: major ターン・セッション初回・5ターンごとにフルブロック(~1.6k字)、minor ターンはリマインダ(~0.23k字、−86%); 全注入を `state/fable-mode/stats/` に記録 |
+| SubagentStart フック | `hooks/fable-subagent.sh` | 全サブエージェントのスポーン時にアイデンティティ中立の規範ブロックを注入 |
+| Stop フック | `hooks/fable-stop-verify.sh` | 引退した no-op スタブ (v1.5) — 登録だけ残し、1ファイルの git revert で自己検証パスを復活できる |
+| output style | `output-styles/fable-like.md` | 規範のシステムプロンプトレベル移植 |
+| スキル | `skills/fable-mode/` | `/fable-mode on\|off\|status` 手動トグル |
+| ラッパー | `bin/claude-fablelike` | ワンショット: Opus + xhigh effort + output style + フック |
+| 任意 | `docs/conduct-snippet.md` | SubagentStart 非対応 CLI (旧 CLI・最小 -p 構成) 用フォールバック |
+
+</details>
 
 ## 📉 正直な限界
 

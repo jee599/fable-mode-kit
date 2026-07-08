@@ -14,10 +14,9 @@
 </h3>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v1.4-blue?style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/badge/version-v1.5-blue?style=flat-square" alt="Version" />
   <img src="https://img.shields.io/badge/행동_충실도-64%25→97%25-brightgreen?style=flat-square" alt="Conduct" />
   <img src="https://img.shields.io/badge/비용-Fable의_0.72×-orange?style=flat-square" alt="Cost" />
-  <img src="https://img.shields.io/badge/분기_테스트-14%2F14-brightgreen?style=flat-square" alt="Tests" />
 </p>
 
 ---
@@ -146,11 +145,14 @@ git clone https://github.com/jee599/fable-mode-kit && cd fable-mode-kit && ./ins
 | 단순 질문 | $0.12 | $0.13 | $0.27 | 🏆 49% | ~85% |
 | **합계** | **$1.54** | **$1.99** | **$2.77** | **72%** | **80–95%** |
 
+<sub>표의 셀은 반올림된 회당 값이고 합계·배율은 반올림 전 원값으로 계산했다 — 표시된 셀로 재계산하면 마지막 자릿수가 ±1 다를 수 있다.</sub>
+
 > [!NOTE]
 > 불리한 숫자도 표에 남긴다. 구현 과제에서 킷의 비용 우위는 9%뿐이었다. 모호 과제에선
 > 킷이 순정보다 **31% 더 썼다** — 행동을 사는 교정 턴의 값이다. Fable은 출력 토큰을
 > 절반만 쓰고도(9.8k vs 20.0k) 단가 2× 때문에 비용에서 진다. 구현 산출물 3벌(순정/킷/Fable)은
-> 같은 테스트 케이스에서 **전부 동일한 출력**을 냈다.
+> 같은 테스트 케이스에서 **전부 동일한 출력**을 냈다. 이 표는 v1.4에서 측정한 값이며,
+> v1.5는 major 턴의 Stop 추가 생성 패스를 제거했으므로 비용은 v1.4 측정치와 같거나 낮다.
 
 ## 🆚 output style 하나면 되지 않나?
 
@@ -160,31 +162,32 @@ output style은 3층 중 한 층일 뿐이다 — 혼자서는 부족하다:
 |:---|:---:|:---:|:---:|
 | 긴 컨텍스트 희석에서 살아남음 | ❌ | 🟡 | ✅ 매 턴 재주입 |
 | 서브에이전트 커버 (빌트인·커스텀·워크플로) | ❌ | ❌ | ✅ SubagentStart |
-| 턴 종료 자가검증 강제 | ❌ | ❌ | ✅ Stop `decision:block` |
-| 결정론적 누설가드 (신뢰 대신 grep) | ❌ | ❌ | ✅ v1.4 |
+| 턴 종료 자가검증 | ❌ | ❌ | ✅ full 블록 마무리 점검 불릿 (매 턴 주입) |
+| 규범 누설 방지 (지침 용어 유출 차단) | ❌ | ❌ | ✅ 누설 벡터 원천 제거 + 규범 조항 |
 | Opus 자동 감지, Fable 세션엔 자동 침묵 | ❌ | ❌ | ✅ |
 | 주입 오버헤드 텔레메트리 | ❌ | ❌ | ✅ v1.4 |
 
 ## ⚙️ 동작 원리
 
-셸 스크립트 4개가 세션 수명주기의 네 순간을 잡는다. 데몬도 프록시도 없다 —
-상태는 빈 마커 파일이 전부다.
+셸 스크립트 4개가 세션 수명주기 훅에 걸린다 — 그중 Stop 훅은 v1.5에서 은퇴해
+no-op 스텁으로 등록만 유지한다. 데몬도 프록시도 없다 — 상태는 빈 마커 파일이 전부다.
 
 ```
   ┌──────────────────────────────────────────────────────────────┐
   │  SessionStart      fable-detect.sh                           │
-  │    "지금 Opus인가?" — 플래그 → settings → 트랜스크립트 폴백    │
+  │    "지금 Opus인가?" — input .model → 조상 --model 플래그     │
+  │    → settings.json (추정이면 중립 안내)                      │
   │           ↓                                                  │
   │  UserPromptSubmit  fable-context.sh            (매 턴)       │
-  │    규범 13조항 재주입 — v1.4부터 적응형:                       │
-  │    major 턴 = 풀 블록 · minor 턴 = −84% 리마인더              │
+  │    규범 재주입 + 턴별 재감지(트랜스크립트·/model 전환·       │
+  │    Fable 세션 스탠드다운) — 적응형: major=풀 블록            │
+  │    (마무리 점검 불릿 포함) · minor=−86% 리마인더             │
   │           ↓                                                  │
-  │  SubagentStart     fable-subagent.sh           (스폰마다)     │
-  │    서브에이전트는 매 턴 주입을 못 본다 → 스폰 순간에 주입       │
+  │  SubagentStart     fable-subagent.sh           (스폰마다)    │
+  │    서브에이전트는 매 턴 주입을 못 본다 → 스폰 때 주입        │
   │           ↓                                                  │
-  │  Stop              fable-stop-verify.sh        (major 턴)    │
-  │    종료를 1회 차단: 주장 검증·결론 우선 재마무리 →              │
-  │    최종 텍스트를 grep해 규범 누설까지 잡는다                    │
+  │  Stop              fable-stop-verify.sh  (은퇴·no-op 스텁)   │
+  │    등록만 유지 — 한 파일 git revert로 재활성 가능            │
   └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -199,9 +202,13 @@ output style은 3층 중 한 층일 뿐이다 — 혼자서는 부족하다:
 ```bash
 $ /fable-mode status
 GLOBAL 마커: off · 이 세션: 자동 감지 (claude-opus-4-8)
-주입: full 4회 × 1,377자 · lite 11회 × 214자
-오버헤드 ≈ 이 세션 4,900토큰 (v1.3이었으면 ≈ 12,900토큰)
+주입: full 4회 × 1,636자(≈1,020토큰) · lite 11회 × 234자(≈146토큰)
+오버헤드 ≈ 이 세션 5,700토큰 (v1.3이었으면 ≈ 15,300토큰)
 ```
+
+주입 크기는 격리 실행 실측값이다 — full 블록 1,636자(중립 정체 변형은 1,643자),
+lite 리마인더 234자로 full 대비 **−86%**. major 턴·세션 첫 주입·매 5회째만 full이고
+나머지는 lite다.
 
 ## 🛡️ 제어와 안전장치
 
@@ -211,11 +218,13 @@ GLOBAL 마커: off · 이 세션: 자동 감지 (claude-opus-4-8)
 | 🟢 `FABLE_MODE=1` | 강제 활성화 (`claude-fablelike`가 export하는 것) |
 | 🔍 진짜 Fable 세션 | 트랜스크립트에서 자동 감지 → 훅 **자동 침묵**, 이중 주입 없음 |
 | 🔁 `/fable-mode on\|off\|status` | 수동 토글 + 텔레메트리 |
-| 🏷️ 정체성 | 주입 블록이 "너는 Opus다"라고 고정 — 과제 출력에서 Fable 사칭 없음 |
+| 🏷️ 조건부 정체 가드 | 모델이 확정된 경로(`FABLE_MODE=1`·트랜스크립트 opus 감지)에서만 "너는 Opus다"라고 규정한다. 마커·settings.json 추정 같은 **미확정 세션엔 중립 정체 문구**를 넣어 Opus를 단정하지 않는다 — settings.json이 opus로 고정된 채 실제로는 Fable로 도는 오추정을 막는다. 어느 쪽이든 과제 출력에서 Fable 사칭은 없다 |
 
 > [!IMPORTANT]
-> Stop 자가검증은 **major 프롬프트당 턴 하나를 더 쓴다**. 킷 비용의 대부분이 이것이고,
-> 타임아웃 예산이 있는 헤드리스 런에서 `export FABLE_MODE=0`으로 꺼야 하는 이유다.
+> v1.5는 Stop 자가검증 훅을 은퇴시켰다. 자가검증이 매 턴 주입의 "마무리 점검" 불릿으로
+> 옮겨가 이제 **추가 생성 패스가 없다** — 모델 전용 컨텍스트라 사용자에게도 안 보인다.
+> 남는 비용은 매 턴 규범 주입의 컨텍스트 토큰뿐이고, 타임아웃 예산이 빠듯한 헤드리스·크론
+> 런에서는 `export FABLE_MODE=0`으로 그 주입까지 끌 수 있다.
 
 <details>
 <summary>📦 설치되는 것 (8개)</summary>
@@ -223,13 +232,13 @@ GLOBAL 마커: off · 이 세션: 자동 감지 (claude-opus-4-8)
 | 구성 | 파일 | 역할 |
 |---|---|---|
 | SessionStart 훅 | `hooks/fable-detect.sh` | Opus 세션 자동 감지 → fable-mode 장전 |
-| UserPromptSubmit 훅 | `hooks/fable-context.sh` | 매 턴 규범 재주입 — v1.4 적응형: major 턴·세션 첫 턴·5턴마다 풀 블록(~1.4k자), minor 턴은 리마인더(~0.2k자, −84%); 매 주입을 `state/fable-mode/stats/`에 기록 |
+| UserPromptSubmit 훅 | `hooks/fable-context.sh` | 매 턴 규범 재주입 — 적응형: major 턴·세션 첫 턴·5턴마다 풀 블록(~1.6k자, major엔 "마무리 점검" 불릿 포함), 그 외 minor 턴은 리마인더(~0.2k자, full 대비 −86%); 매 주입을 `state/fable-mode/stats/`에 기록 |
 | SubagentStart 훅 | `hooks/fable-subagent.sh` | 모든 서브에이전트 스폰 시 정체성 중립 규범 블록 주입 |
-| Stop 훅 | `hooks/fable-stop-verify.sh` | major 턴 1회 자가검증 + 결정론적 누설가드 (v1.4) |
+| Stop 훅 | `hooks/fable-stop-verify.sh` | 은퇴한 no-op 스텁 — Stop 등록은 유지(한 파일 git revert로 재활성). 자가검증은 `fable-context.sh` 매 턴 주입으로 이관됨 |
 | output style | `output-styles/fable-like.md` | 규범의 시스템 프롬프트 레벨 이식 |
 | 스킬 | `skills/fable-mode/` | `/fable-mode on\|off\|status` 수동 토글 |
 | 래퍼 | `bin/claude-fablelike` | 원샷: Opus + xhigh effort + output style + 훅 |
-| 선택 | `agents/conduct-snippet.md` | SubagentStart 미지원 CLI용 폴백; 마커 보유 에이전트는 자동 스킵 |
+| 선택 | `docs/conduct-snippet.md` | SubagentStart 미지원 CLI용 폴백; 마커 보유 에이전트는 자동 스킵 |
 
 </details>
 

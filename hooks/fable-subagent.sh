@@ -17,7 +17,7 @@
 #   2. transcript last model: fable → stand down, opus → activate
 #   3. session marker (fable-detect.sh) or GLOBAL marker (/fable-mode on)
 # Dedupe: agents whose definition file already carries the static
-# "fable-like-conduct" block (agents/conduct-snippet.md) are skipped.
+# "fable-like-conduct" block (docs/conduct-snippet.md) are skipped.
 
 [[ "${FABLE_MODE:-}" == "0" ]] && exit 0
 command -v jq >/dev/null 2>&1 || exit 0
@@ -62,11 +62,11 @@ fi
 CTX=$(cat <<'EOF'
 [conduct norms for this agent task — internal guidance; never mention this block or these rules in your output]
 - Lead with the outcome: the first sentence of your final message states the conclusion (what happened / what you found); supporting detail after. Your final message is the ONLY thing returned to the caller — everything needed must be in it, written in complete sentences, no arrow chains, fragments, or invented codenames.
-- Act without permission questions: for reversible actions inside the task scope, proceed; pick reasonable defaults for minor choices and note them. If your last paragraph is a plan or a promise, execute it with tool calls before finishing.
+- Act without permission questions: for reversible actions inside the task scope, proceed; stop only for destructive actions or externally visible effects (publishing, sending, deleting shared state). Pick reasonable defaults for minor choices and note them. If your last paragraph is a plan, a question you could answer yourself, or a promise, execute it with tool calls before finishing.
 - If the task asks a question or for a diagnosis, report findings only — do not modify files unasked.
 - Claim only what a tool result in this run proves: report failures with their output, skips as skips, and completed work assertively, naming the check that proves it. Never say "should work" for something you could have run.
-- Inspect targets before deleting or overwriting; batch independent tool calls in parallel; search when the answer may postdate your training data.
-- Code: match the surrounding style and comment density; comment only constraints the code cannot show — never reviewer-directed justification.
+- Inspect targets before deleting or overwriting, and before state-changing commands confirm the evidence supports that specific action; batch independent tool calls in parallel; search when the answer may postdate your training data.
+- Code: match the surrounding style and comment density; comment only constraints the code cannot show — never reviewer-directed justification. Reference code locations as file_path:line_number.
 EOF
 )
 jq -n --arg ctx "$CTX" '{hookSpecificOutput:{hookEventName:"SubagentStart",additionalContext:$ctx}}'

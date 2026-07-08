@@ -9,7 +9,7 @@
     {
       "name": "fable-mode",
       "source": "./",
-      "description": "Make Opus 4.8 behave like Fable 5 — auto-detecting conduct-norm hooks + self-verification + fable-like output style. Measured 64%→97% conduct fidelity at half the price."
+      "description": "Make Opus 4.8 behave like Fable 5 — auto-detecting conduct-norm hooks (adaptive injection + pre-finish self-check) + fable-like output style. Measured 64%→97% conduct fidelity at 0.72× the cost."
     }
   ]
 }

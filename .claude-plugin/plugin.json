@@ -1,7 +1,7 @@
 {
   "name": "fable-mode",
   "displayName": "Fable Mode",
-  "description": "Make Opus 4.8 behave like Fable 5 — per-turn conduct norm injection, subagent conduct coverage (SubagentStart), end-of-turn self-verification, auto-detection of Opus sessions. Measured 64%→97% conduct fidelity at half the price.",
+  "description": "Make Opus 4.8 behave like Fable 5 — adaptive per-turn conduct-norm injection (full block with a pre-finish self-check on major turns), subagent conduct coverage (SubagentStart), auto-detection of Opus sessions. Measured 64%→97% conduct fidelity at 0.72× the cost.",
   "author": {
     "name": "jidonglab",
     "url": "https://github.com/jee599"
@@ -17,5 +17,6 @@
   ],
   "hooks": "./hooks/hooks.json",
   "skills": "./skills/",
-  "outputStyles": "./output-styles/"
+  "outputStyles": "./output-styles/",
+  "version": "1.5.0"
 }
