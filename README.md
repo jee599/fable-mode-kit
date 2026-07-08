@@ -5,8 +5,8 @@
 </h1>
 
 <h3 align="center">
-  Claude Fable 5 costs exactly 2× Opus 4.8 — but half of "Fable-ness" is just instructions.<br>
-  This kit ports them. <code>/plugin install fable-mode@jidonglab</code> → next session, done.
+  You're paying 2× for Claude Fable 5. Half of what you're buying is a system prompt.<br>
+  This kit ports that half to Opus. <code>/plugin install fable-mode@jidonglab</code> → next session, done.
 </h3>
 
 <p align="center">
@@ -255,6 +255,20 @@ overhead ≈ 5,700 tokens this session (all-full, no adaptive lite, ≈ 15,300)
 
 </details>
 
+## 🧪 Built by Diffing, Hardened by Self-Audit
+
+- **The diff.** Headless probes of both models + CLI binary strings showed Fable 5 and
+  Opus 4.8 run the *same harness* — same tools, same effort dial, same workflows. The
+  difference that matters is a conduct section only Fable's system prompt carries.
+  Instructions are text. Text is portable. Hence this kit.
+- **The audit.** v1.5 shipped after an 11-agent fleet — running these very norms — audited
+  the kit end to end: 29 findings, every major claim handed to an adversarial verifier told
+  to refute it. Two "majors" died in verification, one got downgraded. The survivors were
+  fixed and released the same day.
+- **The best bug.** A real Fable 5 session briefly got injected with *"you are Opus."*
+  It self-healed one turn later — and v1.5 makes it structurally impossible: the identity
+  line is only asserted when the session model is confirmed, never on a guess.
+
 ## 📉 Honest Limits
 
 - **97% is a conduct score**, not an intelligence benchmark. Sample: 4 task types ×
@@ -292,5 +306,11 @@ MIT
 <p align="center">
   <a href="https://github.com/jee599/fable-mode-kit">
     <img src="https://img.shields.io/badge/GitHub-⭐_Star_this_repo-yellow?style=for-the-badge&logo=github" alt="Star" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://star-history.com/#jee599/fable-mode-kit&Date">
+    <img src="https://api.star-history.com/svg?repos=jee599/fable-mode-kit&type=Date" alt="Star History Chart" width="600" />
   </a>
 </p>

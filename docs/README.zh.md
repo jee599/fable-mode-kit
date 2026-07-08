@@ -9,8 +9,8 @@
 </h1>
 
 <h3 align="center">
-  Claude Fable 5 的价格恰好是 Opus 4.8 的 2 倍 — 但「Fable 特质」的一半只是指令。<br>
-  这个工具包把它移植过来。<code>/plugin install fable-mode@jidonglab</code> → 下个会话即生效。
+  你为 Fable 5 付了 2 倍的钱。其中一半买的是一段系统提示词。<br>
+  这个工具包把那一半移植给 Opus。<code>/plugin install fable-mode@jidonglab</code> → 下个会话即生效。
 </h3>
 
 <p align="center">
@@ -245,6 +245,17 @@ lite 提醒块 234 字 ≈ 146 tokens — lite 比 full 省 **−86%**;节奏不
 
 </details>
 
+## 🧪 源于差分对比，成于自我审计
+
+- **差分对比。** 用无头探针 + CLI 二进制分析对比两个模型后发现：Fable 5 和 Opus 4.8 跑在
+  *同一套harness*上 — 工具、effort 档位、工作流全部相同。真正的差别，是只有 Fable 的系统提示词
+  才携带的行为规范段落。指令是文本，文本可以移植 — 这就是这个工具包存在的理由。
+- **自我审计。** v1.5 发布之前，一支由 11 个智能体组成的舰队（运行的正是这套规范）对工具包做了
+  全面审计：29 项发现，每条 major 主张都交给一个被命令「去反驳它」的对抗验证者 — 两条「major」
+  在验证中被击毙，一条被降级。幸存的当天修复、当天发布。
+- **最好的一个 bug。** 一个真正的 Fable 5 会话曾被注入 *「你是 Opus」*。它在下一轮就自愈了，
+  但 v1.5 让这件事在结构上不可能再发生 — 只有会话模型被确认时才断言身份，猜测永远不算数。
+
 ## 📉 诚实的局限
 
 - **97% 是行为分**，不是智能基准。样本: 4 类任务 × 每条件 1 次运行
@@ -281,5 +292,11 @@ MIT
 <p align="center">
   <a href="https://github.com/jee599/fable-mode-kit">
     <img src="https://img.shields.io/badge/GitHub-⭐_Star_this_repo-yellow?style=for-the-badge&logo=github" alt="Star" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://star-history.com/#jee599/fable-mode-kit&Date">
+    <img src="https://api.star-history.com/svg?repos=jee599/fable-mode-kit&type=Date" alt="Star History Chart" width="600" />
   </a>
 </p>

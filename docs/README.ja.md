@@ -9,8 +9,8 @@
 </h1>
 
 <h3 align="center">
-  Claude Fable 5 の料金は Opus 4.8 のちょうど2倍 — だが「Fable らしさ」の半分は単なる指示文だ。<br>
-  このキットがそれを移植する。<code>/plugin install fable-mode@jidonglab</code> → 次のセッションから完了。
+  あなたは Fable 5 に2倍払っている。その半分はシステムプロンプトの代金だ。<br>
+  このキットがその半分を Opus に移植する。<code>/plugin install fable-mode@jidonglab</code> → 次のセッションから完了。
 </h3>
 
 <p align="center">
@@ -244,6 +244,18 @@ GLOBAL マーカー: off · このセッション: 自動検出 (claude-opus-4-8
 
 </details>
 
+## 🧪 差分解析から生まれ、自己監査で鍛えられた
+
+- **差分解析。** 両モデルをヘッドレスプローブ + CLI バイナリ解析で比較した結果、Fable 5 と Opus 4.8 は
+  *同じハーネス*で動く — ツールも effort ダイヤルもワークフローも同一。決定的な違いは、Fable の
+  システムプロンプトだけが持つ行動規範セクションだ。指示文はテキストで、テキストは移植できる。だからこのキットがある。
+- **自己監査。** v1.5 は、まさにこの規範で動く 11 エージェントの艦隊がキットを総点検してから出荷された:
+  発見 29 件、major 主張はすべて「反証せよ」と命じられた敵対検証者へ — 「major」2 件が検証で死に、
+  1 件が降格。生き残った分は同日中に修正・リリース。
+- **最高のバグ。** 本物の Fable 5 セッションに *「君は Opus だ」* が注入されたことがある。1 ターンで
+  自己修復したが、v1.5 はこれを構造的に不可能にした — アイデンティティの断定はセッションモデルが
+  確定した時だけ。推測では決して行わない。
+
 ## 📉 正直な限界
 
 - **97% は行動スコア**であり、知能ベンチマークではない。サンプル: 4タスク × 条件あたり1実行
@@ -280,5 +292,11 @@ MIT
 <p align="center">
   <a href="https://github.com/jee599/fable-mode-kit">
     <img src="https://img.shields.io/badge/GitHub-⭐_Star_this_repo-yellow?style=for-the-badge&logo=github" alt="Star" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://star-history.com/#jee599/fable-mode-kit&Date">
+    <img src="https://api.star-history.com/svg?repos=jee599/fable-mode-kit&type=Date" alt="Star History Chart" width="600" />
   </a>
 </p>

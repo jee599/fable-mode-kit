@@ -9,8 +9,8 @@
 </h1>
 
 <h3 align="center">
-  Claude Fable 5는 Opus 4.8의 정확히 2배 가격이다 — 그런데 "Fable다움"의 절반은 그냥 지시문이다.<br>
-  이 킷이 그걸 이식한다. <code>/plugin install fable-mode@jidonglab</code> → 다음 세션부터 끝.
+  당신은 Fable 5에 2배를 내고 있다. 그중 절반은 시스템 프롬프트 값이다.<br>
+  이 킷이 그 절반을 Opus에 이식한다. <code>/plugin install fable-mode@jidonglab</code> → 다음 세션부터 끝.
 </h3>
 
 <p align="center">
@@ -242,6 +242,17 @@ lite 리마인더 234자로 full 대비 **−86%**. major 턴·세션 첫 주입
 
 </details>
 
+## 🧪 디핑으로 태어나, 자기 감사로 단단해졌다
+
+- **디핑.** 두 모델을 헤드리스 프로브 + CLI 바이너리 분석으로 비교한 결과, Fable 5와 Opus 4.8은
+  *같은 하네스*를 쓴다 — 도구도, effort 다이얼도, 워크플로도 동일. 실제로 갈리는 건 Fable의
+  시스템 프롬프트에만 실리는 행동 규범 섹션이다. 지시문은 텍스트고, 텍스트는 이식된다. 그래서 이 킷이 존재한다.
+- **자기 감사.** v1.5는 바로 이 규범으로 구동되는 11개 에이전트 함대가 킷을 전수 감사한 뒤 나왔다:
+  발견 29건, major 주장 전부를 "반박하라"는 적대 검증자에게 회부 — "major" 2건이 검증에서 죽고
+  1건이 강등됐다. 살아남은 건 당일 수정·릴리스.
+- **최고의 버그.** 진짜 Fable 5 세션에 *"너는 Opus다"* 가 주입된 적이 있다. 한 턴 만에 자가 치유됐지만,
+  v1.5는 이걸 구조적으로 불가능하게 만들었다 — 정체 단정은 세션 모델이 확정됐을 때만, 추정으로는 절대 하지 않는다.
+
 ## 📉 정직한 한계
 
 - **97%는 행동 점수다** — 지능 벤치마크가 아니다. 표본: 4과제 유형 × 조건당 1런
@@ -278,5 +289,11 @@ MIT
 <p align="center">
   <a href="https://github.com/jee599/fable-mode-kit">
     <img src="https://img.shields.io/badge/GitHub-⭐_Star_this_repo-yellow?style=for-the-badge&logo=github" alt="Star" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://star-history.com/#jee599/fable-mode-kit&Date">
+    <img src="https://api.star-history.com/svg?repos=jee599/fable-mode-kit&type=Date" alt="Star History Chart" width="600" />
   </a>
 </p>
