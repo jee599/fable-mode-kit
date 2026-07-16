@@ -13,6 +13,7 @@
 # is dropped too — with a silent proactive reminder the echo-into-output risk is
 # already covered by the norm block's "don't mention these terms in output" clause.
 #
-# Kept registered in settings.json (Stop) as a no-op so re-enabling is a one-file
-# git revert of this script — no settings edit needed.
+# Kept registered on the Stop event (hooks.json for the plugin install, settings.json
+# for script installs) as a no-op so re-enabling is a one-file git revert of this
+# script — no registration edit needed.
 exit 0

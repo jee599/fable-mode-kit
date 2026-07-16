@@ -11,9 +11,10 @@
 # neutrally; the per-turn transcript detection confirms or stands down from turn 2.
 
 STATE_DIR="$HOME/.claude/state/fable-mode"
-mkdir -p "$STATE_DIR/sessions" "$STATE_DIR/turns" "$STATE_DIR/stats" 2>/dev/null
+mkdir -p "$STATE_DIR/sessions" "$STATE_DIR/stats" 2>/dev/null
 # GC runs before the kill-switch on purpose: FABLE_MODE=0-only environments (cron
-# fleets) must still age out state instead of accumulating it forever.
+# fleets) must still age out state instead of accumulating it forever. turns/ is a
+# retired v1.2 Stop-hook dir — swept for existing installs, no longer created.
 find "$STATE_DIR/sessions" "$STATE_DIR/turns" "$STATE_DIR/stats" -type f -mtime +7 -delete 2>/dev/null
 
 [[ "${FABLE_MODE:-}" == "0" ]] && exit 0  # explicit kill-switch (claude-fast, A/B tests)
@@ -47,10 +48,21 @@ if [[ -z "$MODEL" ]]; then
     fi
   done
 fi
-# fallback 2: persisted default model in settings.json — a guess, not a session signal
+# fallback 2: persisted model from settings files — a guess, not a session signal.
+# Resolution order mirrors Claude Code's own precedence: project settings.local.json
+# → project settings.json → user settings.local.json → user settings.json. A project
+# pin overrides the user default on restart, so reading only ~/.claude/settings.json
+# guesses wrong exactly when a project pins a different model.
 if [[ -z "$MODEL" ]]; then
-  MODEL=$(jq -r '.model // empty' "$HOME/.claude/settings.json" 2>/dev/null)
-  SRC="settings"
+  CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
+  candidates=()
+  [[ -n "$CWD" ]] && candidates+=("$CWD/.claude/settings.local.json" "$CWD/.claude/settings.json")
+  candidates+=("$HOME/.claude/settings.local.json" "$HOME/.claude/settings.json")
+  for f in "${candidates[@]}"; do
+    [[ -f "$f" ]] || continue
+    MODEL=$(jq -r '.model // empty' "$f" 2>/dev/null)
+    [[ -n "$MODEL" ]] && { SRC="settings"; break; }
+  done
 fi
 
 case "$MODEL" in

@@ -12,6 +12,18 @@ SETTINGS="$CLAUDE_DIR/settings.json"
 
 command -v jq >/dev/null || { echo "ERROR: jq is required (brew install jq / apt install jq)"; exit 1; }
 
+# SubagentStart hooks ship in Claude Code ~2.1.200+; older CLIs silently ignore the
+# event, so warn instead of failing (everything else in the kit still works there).
+if command -v claude >/dev/null 2>&1; then
+  CLAUDE_VER=$(claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
+  if [[ -n "$CLAUDE_VER" ]]; then
+    IFS=. read -r vmaj vmin vpat <<<"$CLAUDE_VER"
+    if (( vmaj < 2 || (vmaj == 2 && vmin < 1) || (vmaj == 2 && vmin == 1 && vpat < 200) )); then
+      echo "   note: Claude Code $CLAUDE_VER detected — SubagentStart hooks need ~2.1.200+, so fable-subagent.sh will be inert until the CLI updates. For subagent coverage there, embed docs/conduct-snippet.md in agent files instead."
+    fi
+  fi
+fi
+
 echo "== fable-mode kit → $CLAUDE_DIR"
 
 # 1) files

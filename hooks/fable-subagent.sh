@@ -14,7 +14,9 @@
 # Activation mirrors fable-context.sh:
 #   0. FABLE_MODE=0 kill-switch beats everything
 #   1. FABLE_MODE=1 env
-#   2. transcript last model: fable → stand down, opus → activate
+#   2. transcript signal: later-of(last assistant model line, /model local-command
+#      stdout) — the assistant line alone lags one turn behind a mid-session /model
+#      switch. fable → stand down, opus → activate.
 #   3. session marker (fable-detect.sh) or GLOBAL marker (/fable-mode on)
 # Dedupe: agents whose definition file already carries the static
 # "fable-like-conduct" block (docs/conduct-snippet.md) are skipped.
@@ -33,28 +35,54 @@ active=0
 [[ "${FABLE_MODE:-}" == "1" ]] && active=1
 
 if [[ $active -eq 0 ]]; then
-  LAST_MODEL=""
+  SIG=""
   if [[ -n "$TRANSCRIPT" && -f "$TRANSCRIPT" ]]; then
-    LAST_MODEL=$(tail -c 400000 "$TRANSCRIPT" 2>/dev/null | grep -o '"model":"claude-[^"]*"' | tail -1)
+    SIG=$(tail -c 400000 "$TRANSCRIPT" 2>/dev/null | awk '
+      {
+        if (match($0, /"model":"claude-[^"]*"/)) { m=tolower(substr($0,RSTART,RLENGTH)); ml=NR }
+        s=$0
+        while (match(s, /"content":"<local-command-stdout>(Set model to|Kept model as)[^"<]*/)) {
+          w=tolower(substr(s,RSTART,RLENGTH)); wl=NR; s=substr(s,RSTART+RLENGTH)
+        }
+      }
+      END {
+        mk=""; if (m ~ /fable/) mk="fable"; else if (m ~ /opus/) mk="opus"; else if (m!="") mk="other"
+        wk=""; if (w ~ /fable/) wk="fable"; else if (w ~ /opus/) wk="opus"; else if (w!="") wk="other"
+        if (wk!="" && wl+0 > ml+0) print wk
+        else if (mk!="") print mk
+        else if (wk!="") print wk
+      }')
   fi
-  case "$LAST_MODEL" in
-    *fable*) exit 0 ;;
-    *opus*)  active=1 ;;
-    *)       [[ ( -n "$SID" && -f "$STATE_DIR/sessions/$SID" ) || -f "$STATE_DIR/GLOBAL" ]] && active=1 ;;
+  case "$SIG" in
+    fable) exit 0 ;;
+    opus)  active=1 ;;
+    *)     [[ ( -n "$SID" && -f "$STATE_DIR/sessions/$SID" ) || -f "$STATE_DIR/GLOBAL" ]] && active=1 ;;
   esac
 fi
 [[ $active -eq 1 ]] || exit 0
 
 # skip agents that already embed the static conduct block in their definition.
-# Plugin agents live under plugins/marketplaces/<mp>/plugins/<plugin>/agents/ (and a
-# cache/ mirror); their agent_type may be namespaced ("plugin:name"), so match on the
-# bare name. Worst case on a miss is a harmless double injection.
+# Project agents may live in any ancestor of cwd (hooks can run from a subdirectory),
+# so walk up. Plugin agents: single-plugin marketplaces keep agents/ at the repo root
+# (marketplaces/<mp>/agents/), multi-plugin ones under plugins/<plugin>/agents/, and
+# the cache mirrors both as cache/<mp>/<plugin>/<sha>/[plugins/<plugin>/]agents/.
+# agent_type may be namespaced ("plugin:name"), so match on the bare name too.
+# Worst case on a miss is a harmless double injection.
 if [[ -n "$AGENT_TYPE" ]]; then
   BARE="${AGENT_TYPE##*:}"
-  for f in "$CWD/.claude/agents/$AGENT_TYPE.md" \
-           "$HOME/.claude/agents/$AGENT_TYPE.md" \
+  d="$CWD"
+  while [[ -n "$d" && "$d" != "/" ]]; do
+    for f in "$d/.claude/agents/$AGENT_TYPE.md" "$d/.claude/agents/$BARE.md"; do
+      [[ -f "$f" ]] && grep -q 'fable-like-conduct' "$f" && exit 0
+    done
+    d="${d%/*}"
+  done
+  for f in "$HOME/.claude/agents/$AGENT_TYPE.md" \
+           "$HOME/.claude/agents/$BARE.md" \
+           "$HOME/.claude/plugins/marketplaces"/*/agents/"$BARE".md \
            "$HOME/.claude/plugins/marketplaces"/*/plugins/*/agents/"$BARE".md \
-           "$HOME/.claude/plugins/cache"/*/plugins/*/agents/"$BARE".md; do
+           "$HOME/.claude/plugins/cache"/*/*/*/agents/"$BARE".md \
+           "$HOME/.claude/plugins/cache"/*/*/*/plugins/*/agents/"$BARE".md; do
     [[ -f "$f" ]] && grep -q 'fable-like-conduct' "$f" && exit 0
   done
 fi

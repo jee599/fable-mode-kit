@@ -23,13 +23,25 @@
 # wrong guess (settings.json pinned to opus while the session actually runs Fable),
 # and exactly that misfire was observed in production on 2026-07-08.
 #
+# Mid-session /model switch (v1.6): the last assistant "model" line lags exactly one
+# turn behind a /model switch, so the first turn after Opus→Fable still matched opus
+# and injected the assertive identity block into a real Fable turn (observed
+# 2026-07-16). The transcript scan now also reads /model's own local-command output
+# ("Set model to …" / "Kept model as …") and the LATER of the two signals wins.
+# A same-line tie goes to the structural "model" field: an assistant message quoting
+# that stdout text is still authored by the model its own record names.
+#
 # Activation, in priority order:
 #   0. FABLE_MODE=0 kill-switch — beats everything (claude-fast, cron fleet, A/B tests)
 #   1. FABLE_MODE=1 env (claude-fablelike, or export it in your own wrappers)
-#   2. transcript auto-detection: last assistant `"model":"claude-*"` — a fable model
-#      STANDS DOWN even if GLOBAL is set (prevents double-injecting real Fable sessions);
-#      an opus model activates and refreshes the session marker.
-#   3. session marker (fable-detect.sh at SessionStart) or GLOBAL marker (/fable-mode on),
+#   2. hook input `model` field — authoritative when this CLI build provides it
+#      (SessionStart carried none as of 2026-07-03; probed here in case newer
+#      builds add it to UserPromptSubmit).
+#   3. transcript auto-detection: later-of(last assistant `"model":"claude-*"`,
+#      last /model local-command output) — a fable signal STANDS DOWN even if GLOBAL
+#      is set (prevents double-injecting real Fable sessions); an opus signal
+#      activates and refreshes the session marker.
+#   4. session marker (fable-detect.sh at SessionStart) or GLOBAL marker (/fable-mode on),
 #      consulted only when the transcript is silent about the model (turn 1 etc.).
 
 [[ "${FABLE_MODE:-}" == "0" ]] && exit 0  # explicit kill-switch beats every activation path
@@ -46,17 +58,50 @@ active=0
 SURE=0   # 1 = the activation path pins the session model, so asserting "you are Opus" is safe
 [[ "${FABLE_MODE:-}" == "1" ]] && { active=1; SURE=1; }
 
+# hook input model, when this build provides it, is the live session model — no lag.
+if [[ $active -eq 0 ]]; then
+  INPUT_MODEL=$(echo "$INPUT" | jq -r '.model // empty')
+  case "$INPUT_MODEL" in
+    *fable*) rm -f "$MARKER"; exit 0 ;;
+    *opus*)  mkdir -p "$STATE_DIR/sessions"; echo "$INPUT_MODEL" > "$MARKER"; active=1; SURE=1 ;;
+  esac
+fi
+
 # transcript model beats GLOBAL: a session actually running Fable must never get the
 # norms (double-injection + identity confusion), even while /fable-mode on is set.
+# Signal = later-of(structural assistant "model" line, /model local-command stdout);
+# the assistant line alone lags one turn behind a mid-session /model switch. Both
+# patterns anchor on unescaped-quote JSON structure ("model":" / "content":"<) —
+# copies of these strings QUOTED inside message content serialize with escaped
+# quotes (\"model\":…) and can't match, so pasted/discussed text can't spoof the
+# signal. awk emits only fixed vocabulary tokens (fable/opus/other + source), never
+# transcript content — transcript text must not reach eval/echo as code.
 if [[ $active -eq 0 && -n "$SID" ]]; then
-  LAST_MODEL=""
+  SIG=""
   if [[ -n "$TRANSCRIPT" && -f "$TRANSCRIPT" ]]; then
-    LAST_MODEL=$(tail -c 400000 "$TRANSCRIPT" 2>/dev/null | grep -o '"model":"claude-[^"]*"' | tail -1)
+    SIG=$(tail -c 400000 "$TRANSCRIPT" 2>/dev/null | awk '
+      {
+        if (match($0, /"model":"claude-[^"]*"/)) { m=tolower(substr($0,RSTART,RLENGTH)); ml=NR }
+        s=$0
+        while (match(s, /"content":"<local-command-stdout>(Set model to|Kept model as)[^"<]*/)) {
+          w=tolower(substr(s,RSTART,RLENGTH)); wl=NR; s=substr(s,RSTART+RLENGTH)
+        }
+      }
+      END {
+        mk=""; if (m ~ /fable/) mk="fable"; else if (m ~ /opus/) mk="opus"; else if (m!="") mk="other"
+        wk=""; if (w ~ /fable/) wk="fable"; else if (w ~ /opus/) wk="opus"; else if (w!="") wk="other"
+        if (wk!="" && wl+0 > ml+0) print wk "/switch"
+        else if (mk!="") print mk "/assistant"
+        else if (wk!="") print wk "/switch"
+      }')
   fi
-  case "$LAST_MODEL" in
-    *fable*)  rm -f "$MARKER"; exit 0 ;;                        # running Fable → stand down, GLOBAL notwithstanding
-    *opus*)   mkdir -p "$STATE_DIR/sessions"; echo "$LAST_MODEL" | sed 's/.*"model":"\([^"]*\)".*/\1/' > "$MARKER"; active=1; SURE=1 ;;
-    *)        [[ -f "$MARKER" || -f "$STATE_DIR/GLOBAL" ]] && active=1 ;;  # turn 1 etc. — marker may be a guess, SURE stays 0
+  case "$SIG" in
+    fable/*)        rm -f "$MARKER"; exit 0 ;;                  # running Fable → stand down, GLOBAL notwithstanding
+    opus/assistant) mkdir -p "$STATE_DIR/sessions"
+                    tail -c 400000 "$TRANSCRIPT" 2>/dev/null | grep -o '"model":"claude-[^"]*"' | tail -1 | sed 's/.*"model":"\([^"]*\)".*/\1/' > "$MARKER"
+                    active=1; SURE=1 ;;
+    opus/switch)    mkdir -p "$STATE_DIR/sessions"; echo "opus (/model switch)" > "$MARKER"; active=1; SURE=1 ;;
+    *)              [[ -f "$MARKER" || -f "$STATE_DIR/GLOBAL" ]] && active=1 ;;  # turn 1 etc. — marker may be a guess, SURE stays 0
   esac
 fi
 [[ $active -eq 1 ]] || exit 0
